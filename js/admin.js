@@ -1,4 +1,4 @@
-// CARICA PRODOTTO NUOVO
+// CARICA PRODOTTO
 async function inviaProdotto(event) {
     event.preventDefault();
     
@@ -10,10 +10,7 @@ async function inviaProdotto(event) {
     const file = fileInput.files[0];
     const btn = document.getElementById('btn-add-prod');
 
-    if (!file) {
-        alert("Foto obbligatoria!");
-        return;
-    }
+    if (!file) { alert("Foto obbligatoria!"); return; }
 
     try {
         btn.textContent = "Caricamento...";
@@ -38,7 +35,7 @@ async function inviaProdotto(event) {
                 description: '',
                 price: parseFloat(prezzo),
                 image_url: publicUrl,
-                visible: true // Default visibile
+                visible: true
             });
 
         if (insertError) throw insertError;
@@ -54,10 +51,9 @@ async function inviaProdotto(event) {
     }
 }
 
-// INSERISCI SPESA
+// SPESA
 async function inviaSpesa(event) {
     event.preventDefault();
-    
     if (!window.supabaseClient) return;
 
     const dataSpesa = document.getElementById('data-spesa').value;
@@ -85,12 +81,12 @@ async function inviaSpesa(event) {
     }
 }
 
-// --- GESTIONE RIPRISTINO PRODOTTI ---
+// --- RIPRISTINO PRODOTTI ---
 async function loadHiddenProducts() {
     if (!window.supabaseClient) { setTimeout(loadHiddenProducts, 1000); return; }
 
     try {
-        // Cerca prodotti con visible = false
+        // Prendi prodotti nascosti
         const { data, error } = await window.supabaseClient
             .from('products')
             .select('*')
@@ -99,17 +95,24 @@ async function loadHiddenProducts() {
 
         if (error) throw error;
 
-        const container = document.getElementById('restore-container');
+        const container = document.getElementById('restore-content');
+        if (!container) return;
+
         if (data.length === 0) {
-            container.innerHTML = '<p>Nessun prodotto nascosto.</p>';
+            container.innerHTML = '<p style="text-align:center; color:#888;">Nessun prodotto nascosto.</p>';
             return;
         }
 
+        // Genera HTML Lista
         let html = '<ul class="restore-list">';
         data.forEach(p => {
             html += `
                 <li class="restore-item">
-                    <span><strong>${p.name}</strong> - €${p.price}</span>
+                    <img src="${p.image_url}" alt="${p.name}" class="restore-img" onerror="this.src='https://via.placeholder.com/50'">
+                    <div class="restore-info">
+                        <span class="r-name">${p.name}</span>
+                        <span class="r-price">€${p.price.toFixed(2)}</span>
+                    </div>
                     <button class="btn-restore" onclick="ripristinaProdotto(${p.id})">Ripristina</button>
                 </li>
             `;
@@ -122,7 +125,6 @@ async function loadHiddenProducts() {
     }
 }
 
-// Funzione Globale per Ripristinare
 window.ripristinaProdotto = async function(id) {
     try {
         const { error } = await window.supabaseClient
@@ -133,12 +135,11 @@ window.ripristinaProdotto = async function(id) {
         if (error) throw error;
 
         alert("Prodotto ripristinato nel catalogo!");
-        loadHiddenProducts(); // Aggiorna la lista
+        loadHiddenProducts(); 
 
     } catch (err) {
         alert("Errore: " + err.message);
     }
 }
 
-// Carica la lista quando la pagina è pronta
 document.addEventListener('DOMContentLoaded', loadHiddenProducts);

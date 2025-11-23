@@ -53,14 +53,18 @@
                 </form>
             </div>
 
-            <div class="form-section" style="border-top: 5px solid #666;">
-                <h2 style="color: #666;">♻️ Prodotti Nascosti</h2>
-                <p style="font-size:0.9em; color:#666; margin-bottom:15px; flex-grow: 0;">
-                    Qui trovi i prodotti rimossi dal catalogo.
+            <div class="form-section" style="border-top: 5px solid #666; display: block;"> <h2 style="color: #666; margin-bottom: 10px;">♻️ Prodotti Nascosti</h2>
+                
+                <details>
+                    <summary>Clicca per vedere la lista</summary>
+                    <div id="restore-content">
+                        <p>Caricamento...</p>
+                    </div>
+                </details>
+                
+                <p style="font-size:0.85em; color:#888; margin-top:15px; text-align:center;">
+                    Usa questa lista per riattivare prodotti che hai rimosso dal catalogo ma non dal database.
                 </p>
-                <div id="restore-container" style="flex-grow: 1; overflow-y: auto; max-height: 300px;">
-                    <p>Caricamento...</p>
-                </div>
             </div>
 
         </div>

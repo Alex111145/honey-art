@@ -61,7 +61,7 @@ header h1 {
 }
 .invia-btn:hover { background-color: #218838; transform: scale(1.05); }
 
-/* Tasto Cancella (Rosso piccolo) */
+/* Tasto Cancella */
 .btn-delete {
     background-color: transparent;
     color: #dc3545;
@@ -74,37 +74,86 @@ header h1 {
     width: 100%;
     transition: 0.3s;
 }
-.btn-delete:hover {
-    background-color: #dc3545;
-    color: white;
-}
+.btn-delete:hover { background-color: #dc3545; color: white; }
 
-/* Lista Prodotti Nascosti (Admin) */
-.restore-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    flex-grow: 1; /* Occupa lo spazio disponibile */
-}
-.restore-item {
-    background: #f9f9f9;
+/* --- NUOVA LISTA RIPRISTINO (CON FOTO) --- */
+/* Stile per la tendina (details/summary) */
+details {
+    width: 100%;
     border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 10px;
     border-radius: 5px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    cursor: pointer;
+}
+summary {
+    font-weight: bold;
+    color: var(--colore-secondario);
+    list-style: none; /* Nasconde la freccia default */
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+summary::after {
+    content: '▼'; 
+    font-size: 0.8em;
+    transition: transform 0.3s;
+}
+details[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.restore-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.restore-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid #eee;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    transition: 0.2s;
+}
+.restore-item:hover { box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+.restore-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+    background-color: #eee;
+}
+
+.restore-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+.r-name { font-weight: bold; font-size: 0.95em; color: var(--colore-testo-scuro); }
+.r-price { font-size: 0.85em; color: #666; }
+
 .btn-restore {
     background-color: var(--colore-successo);
     color: var(--colore-testo-scuro);
     border: none;
-    padding: 5px 15px;
+    padding: 6px 12px;
     border-radius: 5px;
     cursor: pointer;
     font-weight: bold;
+    font-size: 0.85em;
+    white-space: nowrap;
 }
+.btn-restore:hover { filter: brightness(1.1); }
+
 
 /* --- CONTENITORI --- */
 .catalogo-container, .dashboard-container, .content-container { 
@@ -158,60 +207,32 @@ header h1 {
     border-color: var(--colore-primario); background-color: white; outline: none;
 }
 
-/* --- ADMIN GRID & FORM --- */
+/* --- ADMIN --- */
 .admin-grid {
-    display: grid; 
-    /* 3 colonne se c'è spazio, altrimenti a capo */
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
-    gap: 30px; 
-    /* STRETCH: Rende tutti i box alti uguali alla riga più alta */
-    align-items: stretch; 
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 30px; align-items: stretch;
 }
-
 .form-section {
-    background-color: white; 
-    padding: 30px; 
-    border-radius: 15px;
+    background-color: white; padding: 30px; border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    /* Flexbox per gestire l'altezza interna */
-    display: flex; 
-    flex-direction: column; 
-    height: 100%; /* Occupa tutta l'altezza fornita dalla griglia */
-    min-height: 450px; /* Altezza minima fissa per uniformità */
-    box-sizing: border-box;
+    display: flex; flex-direction: column; justify-content: center;
+    min-height: 450px; /* Altezza fissa per uniformità */
+    height: 100%;
 }
-
 h2 { 
     color: var(--colore-secondario); border-bottom: 2px solid var(--colore-primario); 
     padding-bottom: 10px; margin-bottom: 20px; text-align: center; font-size: 1.5em;
 }
-
-.form-section form {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1; /* Il form occupa tutto lo spazio rimanente */
-}
-
+.form-section form { display: flex; flex-direction: column; flex-grow: 1; }
 .form-section input, .form-section select {
     width: 100%; padding: 12px; margin-bottom: 15px;
     border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px;
 }
 .form-section label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--colore-testo-scuro); }
-
-/* Spinge il bottone in fondo al box */
 .form-section button[type="submit"] {
-    background-color: var(--colore-successo); 
-    color: var(--colore-testo-scuro);
-    border: none; padding: 15px; border-radius: 8px; 
+    background-color: var(--colore-successo); color: var(--colore-testo-scuro);
+    border: none; padding: 15px; border-radius: 8px; margin-top: auto;
     cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%;
-    margin-top: auto; /* Magia: spinge il bottone giù */
-}
-
-/* Per il box ripristino che non ha un form */
-#restore-container {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 /* --- DASHBOARD --- */
@@ -230,16 +251,14 @@ h2 {
 .border-red { border-left: 5px solid var(--colore-spese); }
 .border-red .stat-value { color: var(--colore-spese); }
 
-.charts-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 30px;
-}
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
 .chart-card { 
     background: white; padding: 15px; border-radius: 10px; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box;
 }
 .chart-full { grid-column: 1 / -1; }
 
-/* --- MOBILE/TABLET --- */
+/* --- MOBILE --- */
 @media (max-width: 1024px) {
     header { padding: 10px 15px; flex-wrap: wrap; }
     header h1 { font-size: 1.4em; max-width: 80%; }
