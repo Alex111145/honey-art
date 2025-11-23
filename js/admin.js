@@ -2,12 +2,11 @@ function inviaProdotto(event) {
     event.preventDefault();
     
     const nome = document.getElementById('nome-prodotto').value.trim();
-    const descrizione = ""; // Descrizione rimossa come richiesto
+    const descrizione = ""; 
     const prezzo = document.getElementById('prezzo-prodotto').value;
     const fileInput = document.getElementById('file-foto');
     const file = fileInput.files[0];
 
-    // Controllo Immagine
     if (!file) {
         alert("Attenzione: La foto del prodotto è obbligatoria!");
         return;
@@ -47,7 +46,7 @@ function inviaSpesa(event) {
     const data = document.getElementById('data-spesa').value;
     const importo = parseFloat(document.getElementById('importo-spesa').value);
     const motivo = document.getElementById('descrizione-spesa').value.trim();
-    const categoria = "Generale"; // Categoria rimossa come richiesto
+    const categoria = "Generale"; 
 
     const storedExpenses = localStorage.getItem('honeyArtExpenses');
     let expenses = storedExpenses ? JSON.parse(storedExpenses) : [];

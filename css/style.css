@@ -19,7 +19,7 @@ header {
     align-items: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     position: relative;
-    gap: 15px; /* Spazio tra titolo e controlli */
+    gap: 15px; 
 }
 
 header h1 { 
@@ -29,7 +29,7 @@ header h1 {
     white-space: nowrap; 
     overflow: hidden;
     text-overflow: ellipsis;
-    flex-grow: 1; /* Il titolo occupa lo spazio disponibile */
+    flex-grow: 1; 
 }
 
 .menu-toggle {
@@ -51,17 +51,6 @@ header h1 {
     font-size: 1em; white-space: nowrap;
 }
 .nav-links a:hover { background-color: var(--colore-hover); color: var(--colore-testo-scuro); transform: scale(1.05); }
-
-/* Select Metodo Pagamento (Header) */
-#metodo-pagamento {
-    padding: 8px;
-    border-radius: 5px;
-    border: none;
-    font-weight: bold;
-    color: var(--colore-testo-scuro);
-    background-color: white;
-    cursor: pointer;
-}
 
 .invia-btn {
     background-color: var(--colore-successo-verde);
@@ -104,6 +93,21 @@ header h1 {
 .quantity-control button:hover { background-color: var(--colore-primario); }
 .quantity-display { width: 40px; text-align: center; font-size: 1.2em; font-weight: 600; margin: 0 10px; color: var(--colore-secondario); }
 
+/* Nuovo stile per il selettore pagamento nella card */
+.payment-selector {
+    margin-top: 15px;
+    font-size: 0.9em;
+    color: var(--colore-testo-scuro);
+}
+.payment-selector select {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    margin-left: 5px;
+}
+
 /* --- ADMIN --- */
 .admin-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
@@ -134,7 +138,7 @@ h2 {
 .stats-grid { 
     display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; 
 }
-.stats-grid > :first-child { grid-column: 1 / -1; } /* Saldo Full Width */
+.stats-grid > :first-child { grid-column: 1 / -1; } 
 
 .stat-card {
     background: white; padding: 20px; border-radius: 10px;
@@ -146,10 +150,10 @@ h2 {
 .border-red { border-left: 5px solid var(--colore-spese); }
 .border-red .stat-value { color: var(--colore-spese); }
 
-/* --- DASHBOARD CHARTS (Layout 1-2-1) --- */
+/* --- DASHBOARD CHARTS --- */
 .charts-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 colonne di base */
+    grid-template-columns: 1fr 1fr;
     gap: 30px;
 }
 .chart-card { 
@@ -157,10 +161,9 @@ h2 {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
     width: 100%; box-sizing: border-box;
 }
-/* Classe per forzare la larghezza intera (Saldo e Top Prodotti) */
-.chart-full {
-    grid-column: 1 / -1; 
-}
+
+.chart-full { grid-column: 1 / -1; }
+.chart-limited { max-width: 900px; margin: 0 auto; }
 
 /* --- MOBILE --- */
 @media (max-width: 768px) {
@@ -176,11 +179,10 @@ h2 {
     .nav-links.active { height: auto; padding: 15px 0; border-top: 1px solid rgba(255,255,255,0.1); }
     .nav-links a, .nav-links select, .nav-links button { width: 90%; margin: 5px auto; text-align: center; display: block; }
     
-    /* Griglie Mobile */
     .stats-grid { grid-template-columns: 1fr; }
     .stats-grid > :first-child { grid-column: auto; }
     
-    .charts-grid { grid-template-columns: 1fr; } /* Tutto in colonna */
+    .charts-grid { grid-template-columns: 1fr; }
     .chart-full { grid-column: auto; }
     
     .admin-grid { grid-template-columns: 1fr; }

@@ -34,6 +34,7 @@ function renderProducts() {
         card.className = 'product-card';
         card.setAttribute('data-id', p.id);
         
+        // AGGIUNTA SELECT "CONTANTI / POS" SOTTO LA QUANTITÀ
         card.innerHTML = `
             <img src="${p.img}" alt="${p.name}">
             <div class="product-info">
@@ -44,6 +45,13 @@ function renderProducts() {
                     <button onclick="updateQuantity(${p.id}, -1)">-</button>
                     <span id="qty-${p.id}" class="quantity-display">0</span>
                     <button onclick="updateQuantity(${p.id}, 1)">+</button>
+                </div>
+                <div class="payment-selector">
+                    <label>Paga con:</label>
+                    <select id="pay-method-${p.id}">
+                        <option value="contanti">Contanti 💶</option>
+                        <option value="pos">POS 💳</option>
+                    </select>
                 </div>
             </div>
         `;
@@ -70,36 +78,77 @@ window.updateQuantity = function(id, delta) {
     calculateTotal();
 }
 
-// FUNZIONE AGGIORNATA PER GESTIRE POS/CONTANTI
+// INVIA ORDINE AGGIORNATO: RAGGRUPPA PER METODO
 window.inviaOrdine = function() {
     const total = calculateTotal();
     const items = products.filter(p => quantities[p.id] > 0);
-    const metodo = document.getElementById('metodo-pagamento').value; // 'pos' o 'contanti'
     
     if (items.length === 0) {
         alert("Nessun prodotto selezionato.");
         return;
     }
     
-    // 1. Salva la vendita nello storico (per i grafici dashboard)
+    // Raccogliamo gli item divisi per metodo di pagamento scelto sulla card
+    let itemsCash = [];
+    let itemsPOS = [];
+    let totalCash = 0;
+    let totalPOS = 0;
+
+    items.forEach(item => {
+        const method = document.getElementById(`pay-method-${item.id}`).value;
+        const itemTotal = item.price * quantities[item.id];
+        
+        const orderItem = {
+            id: item.id,
+            name: item.name,
+            quantity: quantities[item.id],
+            price: item.price
+        };
+
+        if (method === 'contanti') {
+            itemsCash.push(orderItem);
+            totalCash += itemTotal;
+        } else {
+            itemsPOS.push(orderItem);
+            totalPOS += itemTotal;
+        }
+    });
+
     const storedSales = localStorage.getItem('honeyArtSales');
     let sales = storedSales ? JSON.parse(storedSales) : [];
+    const timestamp = new Date().toISOString();
+
+    // Salviamo ordine Contanti (se ce ne sono)
+    if (itemsCash.length > 0) {
+        sales.push({
+            id: Date.now(), // ID univoco
+            date: timestamp,
+            amount: totalCash,
+            method: 'contanti',
+            items: itemsCash
+        });
+    }
+
+    // Salviamo ordine POS (se ce ne sono)
+    if (itemsPOS.length > 0) {
+        sales.push({
+            id: Date.now() + 1, // ID univoco diverso
+            date: timestamp,
+            amount: totalPOS,
+            method: 'pos',
+            items: itemsPOS
+        });
+    }
     
-    sales.push({
-        id: Date.now(),
-        date: new Date().toISOString(),
-        amount: total,
-        method: metodo, // Salva se è POS o Contanti
-        items: items
-    });
     localStorage.setItem('honeyArtSales', JSON.stringify(sales));
 
-    // 2. Aggiorna il contatore "prodotti più venduti" (semplificato nel DB prodotti)
-    // Nota: in una app reale si ricalcolerebbe dallo storico. Qui, per semplicità, non modifichiamo i prodotti.
+    let msg = "Ordine registrato!\n";
+    if(itemsCash.length > 0) msg += `- Contanti: €${totalCash.toFixed(2)}\n`;
+    if(itemsPOS.length > 0) msg += `- POS: €${totalPOS.toFixed(2)}\n`;
     
-    alert(`Ordine di €${total.toFixed(2)} registrato con successo!\nPagamento: ${metodo.toUpperCase()}`);
+    alert(msg);
     
-    // Reset interfaccia
+    // Reset
     products.forEach(p => {
         quantities[p.id] = 0;
         const qtyDisplay = document.getElementById(`qty-${p.id}`);

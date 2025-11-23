@@ -1,16 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- 1. RECUPERO DATI ---
+    // --- RECUPERO DATI ---
     const storedSales = localStorage.getItem('honeyArtSales');
     const sales = storedSales ? JSON.parse(storedSales) : [];
     
     const storedExpenses = localStorage.getItem('honeyArtExpenses');
     const expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
     
-    // Se non ci sono dati, usiamo dati finti per non lasciare i grafici vuoti all'inizio
     const hasData = sales.length > 0;
     
-    // --- 2. CALCOLO TOTALI PER I BANNER ---
+    // --- CALCOLI TOTALI ---
     let totalRevenue = 0;
     let totalCash = 0;
     let totalPOS = 0;
@@ -23,31 +22,30 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     expenses.forEach(e => {
-        totalExpenses += Math.abs(e.amount); // Somma spese positivo
+        totalExpenses += Math.abs(e.amount);
     });
     
     const saldo = totalRevenue - totalExpenses;
 
-    // Aggiorna Banner HTML
+    // Aggiornamento Banner
     if (document.getElementById('saldo-totale')) {
         document.getElementById('saldo-totale').textContent = `€${saldo.toFixed(2).replace('.', ',')}`;
         document.getElementById('guadagno-totale').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-totale').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
-        // Per semplicità "mese" = totale in questa demo statica, o metti 0
+        // Simulazione "Mese" = Totale per questa versione
         document.getElementById('guadagno-mese').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
 
-    // --- 3. CONFIGURAZIONE GRAFICI ---
+    // --- GRAFICI ---
 
-    // A. Grafico Andamento Saldo (Full Width)
+    // 1. Andamento Saldo
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
-        // Dati simulati per estetica se vuoto, altrimenti usiamo il totale
+        // Usa dati reali se ci sono, altrimenti simulati per bellezza
         const labels = hasData ? sales.map(s => new Date(s.date).toLocaleDateString()) : ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
-        // Creiamo una curva di accumulo
         let acc = 0;
-        const dataPoints = hasData ? sales.map(s => { acc += s.amount; return acc; }) : [1200, 1800, 500, 2200, 4500, saldo || 6000];
+        const dataPoints = hasData ? sales.map(s => { acc += s.amount; return acc; }) : [1200, 1800, 500, 2200, 4500, 6000];
 
         new Chart(ctxSaldo, {
             type: 'line',
@@ -70,23 +68,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // B. Grafico Contanti (Simulazione Andamento)
+    // 2. Grafico Contanti
     const ctxCash = document.getElementById('cashChart');
     if (ctxCash) {
         let accCash = 0;
-        // Filtra solo vendite contanti o usa dati finti
         const cashSales = hasData ? sales.filter(s => s.method === 'contanti') : [];
         const cashData = hasData ? cashSales.map(s => { accCash += s.amount; return accCash; }) : [200, 400, 450, 800, 1200];
         const cashLabels = hasData ? cashSales.map(s => new Date(s.date).toLocaleDateString()) : ['Sett 1', 'Sett 2', 'Sett 3', 'Sett 4'];
 
         new Chart(ctxCash, {
-            type: 'bar', // A barre per variare
+            type: 'bar',
             data: {
                 labels: cashLabels,
                 datasets: [{
                     label: 'Totale Contanti (€)',
                     data: cashData,
-                    backgroundColor: 'rgba(25, 135, 84, 0.6)', // Verde Soldi
+                    backgroundColor: 'rgba(25, 135, 84, 0.6)',
                     borderColor: '#198754',
                     borderWidth: 1
                 }]
@@ -95,7 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // C. Grafico POS (Simulazione Andamento)
+    // 3. Grafico POS
     const ctxPOS = document.getElementById('posChart');
     if (ctxPOS) {
         let accPOS = 0;
@@ -110,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Totale POS (€)',
                     data: posData,
-                    borderColor: '#0d6efd', // Blu Carta di Credito
+                    borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.1)',
                     borderWidth: 2,
                     fill: true,
@@ -121,24 +118,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // D. Grafico Prodotti Più Venduti (Full Width)
+    // 4. Prodotti Più Venduti
     const ctxTop = document.getElementById('topProductsChart');
     if (ctxTop) {
-        // Calcolo reale dai dati di vendita
         let productCounts = {};
         
         if (hasData) {
             sales.forEach(order => {
                 order.items.forEach(item => {
-                    if (productCounts[item.name]) {
-                        productCounts[item.name] += item.quantity;
-                    } else {
-                        productCounts[item.name] = item.quantity;
-                    }
+                    productCounts[item.name] = (productCounts[item.name] || 0) + item.quantity;
                 });
             });
         } else {
-            // Dati finti
             productCounts = { 'Miele Acacia': 12, 'Set Regalo': 8, 'Vasetto Lavanda': 5, 'Miele Castagno': 15 };
         }
 
@@ -152,19 +143,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     label: 'Quantità Venduta',
                     data: pData,
-                    backgroundColor: [
-                        'rgba(193, 159, 41, 0.7)',
-                        'rgba(91, 66, 0, 0.7)',
-                        'rgba(218, 165, 32, 0.7)',
-                        'rgba(139, 114, 25, 0.7)'
-                    ],
+                    backgroundColor: 'rgba(193, 159, 41, 0.7)',
                     borderColor: '#5B4200',
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
-                indexAxis: 'y', // Orizzontale
+                indexAxis: 'y',
                 plugins: { legend: { display: false } }
             }
         });
