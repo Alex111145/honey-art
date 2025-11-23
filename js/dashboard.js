@@ -36,9 +36,26 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
 
+    // --- PREPARAZIONE DATI TEMPORALI (Raggruppamento per Data) ---
+    sales.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const groupedSales = [];
+    if (hasData) {
+        sales.forEach(s => {
+            const dateStr = new Date(s.date).toLocaleDateString();
+            let group = groupedSales.find(g => g.date === dateStr);
+            if (!group) {
+                group = { date: dateStr, pos: 0, cash: 0 };
+                groupedSales.push(group);
+            }
+            if (s.method === 'pos') group.pos += s.amount;
+            else group.cash += s.amount;
+        });
+    }
+
     // --- GRAFICI ---
 
-    // 1. Andamento Saldo
+    // 1. Andamento Saldo (Full Width)
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
         const labels = hasData ? sales.map(s => new Date(s.date).toLocaleDateString()) : ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
@@ -64,14 +81,55 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: { 
                 responsive: true,
-                // TRUCCO: Su PC (schermo largo) usiamo ratio 4 (largo e basso). 
-                // Su Mobile usiamo ratio 2 (più quadrato)
                 aspectRatio: window.innerWidth < 768 ? 2 : 4 
             }
         });
     }
 
-    // 2. Grafico Contanti
+    // 2. Istogramma Differenza (POS vs Contanti)
+    const ctxDiff = document.getElementById('diffChart');
+    if (ctxDiff) {
+        let diffLabels, diffData;
+        if (hasData) {
+            diffLabels = groupedSales.map(g => g.date);
+            diffData = groupedSales.map(g => g.pos - g.cash);
+        } else {
+            diffLabels = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
+            diffData = [50, -20, 100, -50, 80, -10];
+        }
+
+        const bgColors = diffData.map(val => val >= 0 ? 'rgba(13, 110, 253, 0.7)' : 'rgba(25, 135, 84, 0.7)');
+        const borderColors = diffData.map(val => val >= 0 ? '#0d6efd' : '#198754');
+
+        new Chart(ctxDiff, {
+            type: 'bar',
+            data: {
+                labels: diffLabels,
+                datasets: [{
+                    label: 'Differenza (€)',
+                    data: diffData,
+                    backgroundColor: bgColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                aspectRatio: window.innerWidth < 768 ? 2 : 4,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        grid: {
+                            color: (context) => context.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)',
+                            lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Grafico Contanti (ORA IN LINEA)
     const ctxCash = document.getElementById('cashChart');
     if (ctxCash) {
         let accCash = 0;
@@ -80,22 +138,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const cashLabels = hasData ? cashSales.map(s => new Date(s.date).toLocaleDateString()) : ['Sett 1', 'Sett 2', 'Sett 3', 'Sett 4'];
 
         new Chart(ctxCash, {
-            type: 'bar',
+            type: 'line', // CAMBIATO DA 'bar' A 'line'
             data: {
                 labels: cashLabels,
                 datasets: [{
                     label: 'Totale Contanti (€)',
                     data: cashData,
-                    backgroundColor: 'rgba(25, 135, 84, 0.6)',
+                    backgroundColor: 'rgba(25, 135, 84, 0.2)', // Verde sfumato per il riempimento
                     borderColor: '#198754',
-                    borderWidth: 1
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3
                 }]
             },
             options: { responsive: true }
         });
     }
 
-    // 3. Grafico POS
+    // 4. Grafico POS
     const ctxPOS = document.getElementById('posChart');
     if (ctxPOS) {
         let accPOS = 0;
@@ -111,7 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     label: 'Totale POS (€)',
                     data: posData,
                     borderColor: '#0d6efd',
-                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
                     borderWidth: 2,
                     fill: true,
                     tension: 0.3
@@ -121,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 4. Prodotti Più Venduti
+    // 5. Prodotti Più Venduti
     const ctxTop = document.getElementById('topProductsChart');
     if (ctxTop) {
         let productCounts = {};
