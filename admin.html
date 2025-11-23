@@ -20,45 +20,47 @@
     <div class="content-container">
         
         <div class="form-section">
-            <h2>Aggiungi Nuovo Prodotto</h2>
+            <h2>📦 Carica Nuovo Prodotto</h2>
             <form id="prodottoForm" onsubmit="inviaProdotto(event)">
                 <label for="nome-prodotto">Nome Prodotto:</label>
-                <input type="text" id="nome-prodotto" required>
+                <input type="text" id="nome-prodotto" required placeholder="Es. Miele Castagno 500g">
                 
-                <label for="descrizione-prodotto">Descrizione Breve:</label>
-                <textarea id="descrizione-prodotto" rows="3" required></textarea>
+                <label for="descrizione-prodotto">Descrizione:</label>
+                <textarea id="descrizione-prodotto" rows="3" required placeholder="Descrivi il prodotto..."></textarea>
 
                 <label for="prezzo-prodotto">Prezzo (€):</label>
-                <input type="number" id="prezzo-prodotto" step="0.01" min="0" required>
+                <input type="number" id="prezzo-prodotto" step="0.01" min="0" required placeholder="0.00">
                 
-                <label for="link-foto">Link Immagine (URL - Opzionale):</label>
-                <input type="text" id="link-foto" value="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop">
+                <label for="file-foto">Foto Prodotto (Obbligatoria):</label>
+                <input type="file" id="file-foto" accept="image/*" required style="padding: 5px;">
                 
-                <button type="submit">Aggiungi Prodotto al Catalogo</button>
+                <button type="submit">➕ Aggiungi al Catalogo</button>
             </form>
         </div>
         
-        <div class="form-section">
-            <h2>Registra Spesa</h2>
+        <div class="form-section" style="border-top: 5px solid var(--colore-spese);">
+            <h2 style="color: var(--colore-spese);">📉 Inserisci Spesa Extra</h2>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">Queste spese verranno sottratte dal bilancio totale.</p>
+            
             <form id="spesaForm" onsubmit="inviaSpesa(event)">
                 <label for="data-spesa">Data:</label>
-                <input type="date" id="data-spesa" value="2025-11-23" required>
+                <input type="date" id="data-spesa" required>
                 
-                <label for="importo-spesa">Importo (€):</label>
-                <input type="number" id="importo-spesa" step="0.01" min="0" required>
+                <label for="importo-spesa">Importo Spesa (€):</label>
+                <input type="number" id="importo-spesa" step="0.01" min="0" required placeholder="0.00">
                 
                 <label for="descrizione-spesa">Motivo/Descrizione:</label>
-                <input type="text" id="descrizione-spesa" required>
+                <input type="text" id="descrizione-spesa" required placeholder="Es. Acquisto vasetti vuoti">
                 
                 <label for="categoria-spesa">Categoria:</label>
                 <select id="categoria-spesa" required>
                     <option value="Materiali">Materiali</option>
+                    <option value="Spedizione">Spedizione</option>
                     <option value="Marketing">Marketing</option>
-                    <option value="Logistica">Logistica</option>
-                    <option value="Tasse">Tasse</option>
+                    <option value="Tasse">Tasse/Varie</option>
                 </select>
                 
-                <button type="submit" style="background-color: var(--colore-spese); color: white;">Registra Spesa</button>
+                <button type="submit" style="background-color: var(--colore-spese); color: white;">➖ Registra Uscita</button>
             </form>
         </div>
         
