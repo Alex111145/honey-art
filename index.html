@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyArt - Bomboniere</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>HoneyArt Bomboniere</h1>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <div class="nav-links">
+            <a href="dashboard.html">Grafici</a>
+            <a href="admin.html">Gestione Prodotti</a>
+            <button class="invia-btn" onclick="inviaOrdine()">INVIA Ordine (Totale: €<span id="total-price">0,00</span>)</button>
+        </div>
+    </header>
+    
+    <div class="catalogo-container">
+        <h2 id="catalogo-title">Bomboniere</h2>
+        <div class="product-grid" id="product-list">
+            </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/catalog.js"></script>
+
+</body>
+</html>

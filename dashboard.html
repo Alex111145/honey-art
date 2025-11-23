@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoneyArt - Grafici e Statistiche</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>Grafici e Statistiche</h1>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <div class="nav-links">
+            <a href="index.html">Bomboniere</a>
+            <a href="admin.html">Gestione Prodotti</a>
+        </div>
+    </header>
+    
+    <div class="dashboard-container">
+        <div class="stats-grid">
+            <div class="stat-card saldo">
+                <h3>Guadagno Totale</h3>
+                <div class="stat-value" id="total-saldo">€15.800,00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Guadagno Ultimo Mese</h3>
+                <div class="stat-value" id="monthly-revenue">€2.500,00</div>
+            </div>
+        </div>
+        
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Andamento del Saldo Cumulativo</h2>
+                <canvas id="liquidazioneChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+
+</body>
+</html>
