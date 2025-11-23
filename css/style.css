@@ -83,6 +83,8 @@ header h1 {
 .restore-list {
     list-style: none;
     padding: 0;
+    margin: 0;
+    flex-grow: 1; /* Occupa lo spazio disponibile */
 }
 .restore-item {
     background: #f9f9f9;
@@ -156,31 +158,60 @@ header h1 {
     border-color: var(--colore-primario); background-color: white; outline: none;
 }
 
-/* --- ADMIN --- */
+/* --- ADMIN GRID & FORM --- */
 .admin-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-    gap: 30px; align-items: flex-start; /* Cambiato da stretch a flex-start */
+    display: grid; 
+    /* 3 colonne se c'è spazio, altrimenti a capo */
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+    gap: 30px; 
+    /* STRETCH: Rende tutti i box alti uguali alla riga più alta */
+    align-items: stretch; 
 }
+
 .form-section {
-    background-color: white; padding: 30px; border-radius: 15px;
+    background-color: white; 
+    padding: 30px; 
+    border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-    display: flex; flex-direction: column; justify-content: center;
-    /* Rimosso aspect-ratio fisso per adattarsi al contenuto */
-    min-height: 350px; 
+    /* Flexbox per gestire l'altezza interna */
+    display: flex; 
+    flex-direction: column; 
+    height: 100%; /* Occupa tutta l'altezza fornita dalla griglia */
+    min-height: 450px; /* Altezza minima fissa per uniformità */
+    box-sizing: border-box;
 }
+
 h2 { 
     color: var(--colore-secondario); border-bottom: 2px solid var(--colore-primario); 
     padding-bottom: 10px; margin-bottom: 20px; text-align: center; font-size: 1.5em;
 }
+
+.form-section form {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Il form occupa tutto lo spazio rimanente */
+}
+
 .form-section input, .form-section select {
     width: 100%; padding: 12px; margin-bottom: 15px;
     border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px;
 }
 .form-section label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--colore-testo-scuro); }
-.form-section button {
-    background-color: var(--colore-successo); color: var(--colore-testo-scuro);
-    border: none; padding: 15px; border-radius: 8px; margin-top: auto;
+
+/* Spinge il bottone in fondo al box */
+.form-section button[type="submit"] {
+    background-color: var(--colore-successo); 
+    color: var(--colore-testo-scuro);
+    border: none; padding: 15px; border-radius: 8px; 
     cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%;
+    margin-top: auto; /* Magia: spinge il bottone giù */
+}
+
+/* Per il box ripristino che non ha un form */
+#restore-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 /* --- DASHBOARD --- */
@@ -208,10 +239,10 @@ h2 {
 }
 .chart-full { grid-column: 1 / -1; }
 
-/* --- MOBILE/TABLET (< 1024px per includere i tablet verticali) --- */
+/* --- MOBILE/TABLET --- */
 @media (max-width: 1024px) {
     header { padding: 10px 15px; flex-wrap: wrap; }
-    header h1 { font-size: 1.4em; max-width: 80%; } /* Lascia spazio al menu */
+    header h1 { font-size: 1.4em; max-width: 80%; }
     
     .menu-toggle { display: block; position: absolute; top: 15px; right: 15px; }
     
@@ -230,4 +261,5 @@ h2 {
     .chart-full { grid-column: auto; }
     
     .admin-grid { grid-template-columns: 1fr; }
+    .form-section { min-height: auto; height: auto; }
 }
