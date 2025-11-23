@@ -1,101 +1,165 @@
 document.addEventListener('DOMContentLoaded', async function() {
     
-    // Attendi DB
+    // Verifica se Supabase è pronto
     if (!window.supabaseClient) {
-        // Riprova dopo un po' se non è pronto
+        // Riprova dopo un secondo se la connessione è lenta
         setTimeout(() => location.reload(), 1000);
         return;
     }
 
-    // 1. SCARICA DATI
+    // --- 1. SCARICA DATI (Vendite e Spese) ---
     let sales = [];
     let expenses = [];
     
     try {
-        const { data: salesData, error: sErr } = await window.supabaseClient.from('sales').select('*');
+        // Scarica Vendite
+        const { data: salesData, error: sErr } = await window.supabaseClient
+            .from('sales')
+            .select('*')
+            .order('created_at', { ascending: true });
         if (sErr) throw sErr;
         sales = salesData;
 
-        const { data: expensesData, error: eErr } = await window.supabaseClient.from('expenses').select('*');
+        // Scarica Spese
+        const { data: expensesData, error: eErr } = await window.supabaseClient
+            .from('expenses')
+            .select('*')
+            .order('created_at', { ascending: true });
         if (eErr) throw eErr;
         expenses = expensesData;
 
     } catch (err) {
-        console.error("Errore dashboard:", err);
+        console.error("Errore caricamento dati:", err);
         return; 
     }
 
-    const hasData = sales.length > 0;
-    
-    // 2. CALCOLI
+    const hasData = sales.length > 0 || expenses.length > 0;
+
+    // --- 2. AGGIORNAMENTO BANNER (TOTALI) ---
     let totalRevenue = 0;
     let totalExpenses = 0;
 
+    // Somma Ricavi
     sales.forEach(s => totalRevenue += s.total_amount);
+    
+    // Somma Spese (Nel DB sono negative, usiamo valore assoluto per i banner di testo)
     expenses.forEach(e => totalExpenses += Math.abs(e.amount));
+    
     const saldo = totalRevenue - totalExpenses;
 
+    // Scrivi i valori nei box in alto
     if (document.getElementById('saldo-totale')) {
         document.getElementById('saldo-totale').textContent = `€${saldo.toFixed(2).replace('.', ',')}`;
         document.getElementById('guadagno-totale').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-totale').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
+        
+        // Per semplicità in questa versione usiamo i totali anche nei campi mese
+        // (In una versione avanzata filtreremmo per new Date().getMonth())
         document.getElementById('guadagno-mese').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
 
-    // 3. GRAFICI
-    sales.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    // --- 3. PREPARAZIONE DATI PER I GRAFICI ---
 
-    const groupedSales = [];
-    if (hasData) {
-        sales.forEach(s => {
-            const dateStr = new Date(s.created_at).toLocaleDateString();
-            let group = groupedSales.find(g => g.date === dateStr);
-            if (!group) {
-                group = { date: dateStr, pos: 0, cash: 0 };
-                groupedSales.push(group);
-            }
-            if (s.payment_method === 'pos') group.pos += s.total_amount;
-            else group.cash += s.total_amount;
-        });
-    }
+    // A. GRAFICO SALDO: Uniamo Vendite e Spese in un'unica timeline
+    const transactions = [
+        ...sales.map(s => ({
+            date: new Date(s.created_at),
+            amount: parseFloat(s.total_amount), // Entrata (positiva)
+            type: 'sale'
+        })),
+        ...expenses.map(e => ({
+            date: new Date(e.created_at),
+            amount: parseFloat(e.amount), // Uscita (già negativa nel DB)
+            type: 'expense'
+        }))
+    ];
 
-    // Grafico Saldo
+    // Ordiniamo tutto per data (dal passato al presente)
+    transactions.sort((a, b) => a.date - b.date);
+
+    // Calcoliamo il saldo progressivo passo dopo passo
+    let runningBalance = 0;
+    const saldoLabels = [];
+    const saldoData = [];
+
+    transactions.forEach(t => {
+        runningBalance += t.amount; // Se è spesa (negativa), il saldo scende
+        saldoLabels.push(t.date.toLocaleDateString('it-IT'));
+        saldoData.push(runningBalance);
+    });
+
+    // B. RAGGRUPPAMENTO GIORNALIERO (Per Differenza, Contanti, POS)
+    // Creiamo un oggetto per sommare i totali giorno per giorno
+    const dailyStats = {};
+    
+    // Elabora Vendite
+    sales.forEach(s => {
+        const dateKey = new Date(s.created_at).toLocaleDateString('it-IT');
+        if (!dailyStats[dateKey]) dailyStats[dateKey] = { pos: 0, cash: 0 };
+        
+        if (s.payment_method === 'pos') dailyStats[dateKey].pos += s.total_amount;
+        else dailyStats[dateKey].cash += s.total_amount;
+    });
+
+    // Estrai array per i grafici
+    const days = Object.keys(dailyStats); // Le date uniche
+    const diffData = days.map(d => dailyStats[d].pos - dailyStats[d].cash); // Differenza
+    const cashData = days.map(d => dailyStats[d].cash); // Solo Contanti
+    const posData = days.map(d => dailyStats[d].pos);   // Solo POS
+
+
+    // --- 4. CONFIGURAZIONE GRAFICI CHART.JS ---
+
+    // 1. Grafico Andamento Saldo (Linea che sale e scende)
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
-        const labels = hasData ? sales.map(s => new Date(s.created_at).toLocaleDateString()) : [];
-        let acc = 0;
-        const dataPoints = hasData ? sales.map(s => { acc += s.total_amount; return acc; }) : [];
-
         new Chart(ctxSaldo, {
             type: 'line',
             data: {
-                labels: labels,
+                labels: saldoLabels, // Date di ogni transazione
                 datasets: [{
                     label: 'Saldo Cumulativo (€)',
-                    data: dataPoints,
+                    data: saldoData,     // Valori progressivi
                     borderColor: '#C19F29',
-                    borderWidth: 3,
-                    fill: { target: 'origin', above: 'rgba(193, 159, 41, 0.2)', below: 'rgba(220, 53, 69, 0.2)' },
-                    tension: 0.4
+                    borderWidth: 2,
+                    // Area colorata: Oro se sopra zero, Rossa se sotto zero
+                    fill: {
+                        target: 'origin',
+                        above: 'rgba(193, 159, 41, 0.2)',
+                        below: 'rgba(220, 53, 69, 0.2)'
+                    },
+                    tension: 0.3, // Curvatura linea
+                    pointRadius: 2
                 }]
             },
-            options: { responsive: true, aspectRatio: window.innerWidth < 768 ? 2 : 4 }
+            options: { 
+                responsive: true,
+                // Adatta l'aspetto: largo su PC, più alto su mobile
+                aspectRatio: window.innerWidth < 768 ? 2 : 4,
+                scales: {
+                    y: {
+                        grid: {
+                            // Linea dello zero più marcata
+                            color: (context) => context.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)',
+                            lineWidth: (context) => context.tick.value === 0 ? 2 : 1
+                        }
+                    }
+                }
+            }
         });
     }
 
-    // Grafico Differenza
+    // 2. Istogramma Differenza (POS vs Contanti)
     const ctxDiff = document.getElementById('diffChart');
     if (ctxDiff) {
-        const diffLabels = groupedSales.map(g => g.date);
-        const diffData = groupedSales.map(g => g.pos - g.cash);
         const bgColors = diffData.map(val => val >= 0 ? 'rgba(13, 110, 253, 0.7)' : 'rgba(25, 135, 84, 0.7)');
         const borderColors = diffData.map(val => val >= 0 ? '#0d6efd' : '#198754');
 
         new Chart(ctxDiff, {
             type: 'bar',
             data: {
-                labels: diffLabels,
+                labels: days,
                 datasets: [{
                     label: 'Differenza (€)',
                     data: diffData,
@@ -113,18 +177,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Grafico Contanti (Lineare)
+    // 3. Grafico Contanti (Linea Verde)
     const ctxCash = document.getElementById('cashChart');
     if (ctxCash) {
-        let accCash = 0;
-        const cashSales = hasData ? sales.filter(s => s.payment_method === 'contanti') : [];
-        const cashData = cashSales.map(s => { accCash += s.total_amount; return accCash; });
-        const cashLabels = cashSales.map(s => new Date(s.created_at).toLocaleDateString());
-
         new Chart(ctxCash, {
             type: 'line',
             data: {
-                labels: cashLabels,
+                labels: days,
                 datasets: [{
                     label: 'Totale Contanti (€)',
                     data: cashData,
@@ -139,18 +198,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Grafico POS (Lineare)
+    // 4. Grafico POS (Linea Blu)
     const ctxPOS = document.getElementById('posChart');
     if (ctxPOS) {
-        let accPOS = 0;
-        const posSales = hasData ? sales.filter(s => s.payment_method === 'pos') : [];
-        const posData = posSales.map(s => { accPOS += s.total_amount; return accPOS; });
-        const posLabels = posSales.map(s => new Date(s.created_at).toLocaleDateString());
-
         new Chart(ctxPOS, {
             type: 'line',
             data: {
-                labels: posLabels,
+                labels: days,
                 datasets: [{
                     label: 'Totale POS (€)',
                     data: posData,
@@ -165,10 +219,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Grafico Prodotti
+    // 5. Grafico Prodotti Più Venduti (Barre)
     const ctxTop = document.getElementById('topProductsChart');
     if (ctxTop) {
         let productCounts = {};
+        // Analizza il JSON degli items dentro ogni vendita
         if (hasData) {
             sales.forEach(order => {
                 if (order.items && Array.isArray(order.items)) {
@@ -196,7 +251,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             },
             options: {
                 responsive: true,
-                indexAxis: 'y',
+                indexAxis: 'y', // Barre orizzontali per leggere meglio i nomi
                 plugins: { legend: { display: false } }
             }
         });
