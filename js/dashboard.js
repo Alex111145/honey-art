@@ -32,7 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('saldo-totale').textContent = `€${saldo.toFixed(2).replace('.', ',')}`;
         document.getElementById('guadagno-totale').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-totale').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
-        // Simulazione "Mese" = Totale per questa versione
         document.getElementById('guadagno-mese').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
@@ -42,7 +41,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Andamento Saldo
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
-        // Usa dati reali se ci sono, altrimenti simulati per bellezza
         const labels = hasData ? sales.map(s => new Date(s.date).toLocaleDateString()) : ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
         let acc = 0;
         const dataPoints = hasData ? sales.map(s => { acc += s.amount; return acc; }) : [1200, 1800, 500, 2200, 4500, 6000];
@@ -64,7 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     tension: 0.4
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true,
+                // TRUCCO: Su PC (schermo largo) usiamo ratio 4 (largo e basso). 
+                // Su Mobile usiamo ratio 2 (più quadrato)
+                aspectRatio: window.innerWidth < 768 ? 2 : 4 
+            }
         });
     }
 
