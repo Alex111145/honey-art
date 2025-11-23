@@ -1,5 +1,5 @@
 :root {
-    /* Estratto da 3.html - Nuova Palette Miele Gervasini */
+    /* Palette Miele Gervasini & HoneyArt */
     --colore-primario: #C19F29;       /* Oro Ricco */
     --colore-secondario: #5B4200;     /* Marrone Scuro */
     --colore-sfondo-chiaro: #FDFDF5;  /* Bianco Sporco Caldo */
@@ -7,8 +7,8 @@
     --colore-testo-chiaro: #FFFFFF;
     
     /* Stati Funzionali */
-    --colore-successo: #DAA520;       /* Gold/Verde azione */
-    --colore-successo-verde: #28a745; /* Mantenuto da 1.html per tasto INVIA */
-    --colore-spese: #dc3545;          /* Rosso spese */
+    --colore-successo: #DAA520;       /* Gold generico */
+    --colore-successo-verde: #28a745; /* Verde Invio Ordine */
+    --colore-spese: #dc3545;          /* Rosso Spese */
     --colore-hover: #DAA520;          
 }

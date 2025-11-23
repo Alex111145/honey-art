@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HoneyArt - Grafici e Statistiche</title>
+    <title>HoneyArt - Grafici</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -21,22 +21,33 @@
     <div class="dashboard-container">
         
         <div class="stats-grid">
-            <div class="stat-card saldo">
-                <h3>Guadagno Totale</h3>
-                <div class="stat-value" id="total-saldo">€15.800,00</div>
+            <div class="stat-card border-gold">
+                <h3>💰 Saldo Attuale</h3>
+                <div class="stat-value" id="saldo-totale">€12.500,00</div>
             </div>
-            <div class="stat-card">
-                <h3>Guadagno Ultimo Mese</h3>
-                <div class="stat-value" id="monthly-revenue">€2.500,00</div>
+            <div class="stat-card border-green">
+                <h3>📈 Ricavi Totali</h3>
+                <div class="stat-value" id="guadagno-totale">€18.000,00</div>
+            </div>
+            <div class="stat-card border-green">
+                <h3>📅 Ricavi Mese</h3>
+                <div class="stat-value" id="guadagno-mese">€2.500,00</div>
+            </div>
+            <div class="stat-card border-red">
+                <h3>📉 Spese Totali</h3>
+                <div class="stat-value" id="spesa-totale">-€5.500,00</div>
+            </div>
+            <div class="stat-card border-red">
+                <h3>📅 Spese Mese</h3>
+                <div class="stat-value" id="spesa-mese">-€800,00</div>
             </div>
         </div>
         
         <div class="charts-grid">
             <div class="chart-card">
-                <h2>Andamento del Saldo</h2>
+                <h2>Andamento Saldo</h2>
                 <canvas id="liquidazioneChart"></canvas>
             </div>
-            
             <div class="chart-card">
                 <h2>🏆 Prodotti più Acquistati</h2>
                 <canvas id="topProductsChart"></canvas>
@@ -47,6 +58,5 @@
 
     <script src="js/main.js"></script>
     <script src="js/dashboard.js"></script>
-
 </body>
 </html>

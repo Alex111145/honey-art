@@ -2,12 +2,12 @@ function inviaProdotto(event) {
     event.preventDefault();
     
     const nome = document.getElementById('nome-prodotto').value.trim();
-    // Descrizione rimossa: usiamo una stringa vuota o generica per compatibilità
-    const descrizione = ""; 
+    const descrizione = ""; // Descrizione rimossa come richiesto
     const prezzo = document.getElementById('prezzo-prodotto').value;
     const fileInput = document.getElementById('file-foto');
     const file = fileInput.files[0];
 
+    // Controllo Immagine
     if (!file) {
         alert("Attenzione: La foto del prodotto è obbligatoria!");
         return;
@@ -21,13 +21,12 @@ function inviaProdotto(event) {
         const storedProducts = localStorage.getItem('honeyArtProducts');
         let products = storedProducts ? JSON.parse(storedProducts) : [];
         
-        const maxId = products.length > 0 ? Math.max(...products.map(p => p.id)) : 0;
-        const newId = maxId + 1;
+        const newId = (products.length > 0 ? Math.max(...products.map(p => p.id)) : 0) + 1;
 
         const newProduct = {
             id: newId,
             name: nome,
-            description: descrizione, // Salva vuoto
+            description: descrizione,
             price: parseFloat(prezzo),
             img: base64Img
         };
@@ -48,8 +47,7 @@ function inviaSpesa(event) {
     const data = document.getElementById('data-spesa').value;
     const importo = parseFloat(document.getElementById('importo-spesa').value);
     const motivo = document.getElementById('descrizione-spesa').value.trim();
-    // Categoria rimossa: usiamo "Generale" come default
-    const categoria = "Generale"; 
+    const categoria = "Generale"; // Categoria rimossa come richiesto
 
     const storedExpenses = localStorage.getItem('honeyArtExpenses');
     let expenses = storedExpenses ? JSON.parse(storedExpenses) : [];

@@ -6,41 +6,37 @@ body {
     background-color: var(--colore-sfondo-chiaro);
     color: var(--colore-testo-scuro);
     line-height: 1.6;
-    /* Previene lo scroll orizzontale indesiderato su mobile */
-    overflow-x: hidden; 
+    overflow-x: hidden; /* Previene scroll orizzontale su mobile */
 }
 
 /* --- HEADER & NAVIGAZIONE --- */
 header {
     background-color: var(--colore-primario);
     color: var(--colore-testo-chiaro);
-    padding: 10px 5%; /* Padding ridotto leggermente */
+    padding: 10px 5%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    position: relative; /* Necessario per il menu mobile */
+    position: relative;
 }
 
 header h1 { 
     margin: 0; 
-    font-size: 1.8em; /* Leggermente più piccolo di base */
+    font-size: 1.8em; 
     color: var(--colore-testo-chiaro);
-    /* Se il titolo è lungo, evita che rompa il layout */
     white-space: nowrap; 
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 70%; /* Lascia spazio al bottone hamburger */
+    max-width: 70%;
 }
 
 .menu-toggle {
     display: none; 
-    background: none; 
-    border: none;
+    background: none; border: none;
     color: var(--colore-testo-chiaro); 
-    font-size: 2em; /* Icona più grande per essere cliccabile col dito */
-    cursor: pointer; 
-    padding: 0;
+    font-size: 2em; 
+    cursor: pointer; padding: 0;
 }
 
 .nav-links { display: flex; align-items: center; }
@@ -60,7 +56,7 @@ header h1 {
     transform: scale(1.05);
 }
 
-/* --- STILI CATALOGO --- */
+/* --- ELEMENTI COMUNI --- */
 .invia-btn {
     background-color: var(--colore-successo-verde);
     color: var(--colore-testo-chiaro);
@@ -70,16 +66,15 @@ header h1 {
 }
 .invia-btn:hover { background-color: #218838; transform: scale(1.05); }
 
-.catalogo-container, .dashboard-container { 
-    padding: 20px 5%; /* Padding ridotto per mobile */
+.catalogo-container, .dashboard-container, .content-container { 
+    padding: 20px 5%; 
     max-width: 1400px; 
     margin: auto; 
 }
 
-/* Griglia Prodotti Responsive */
+/* --- CATALOGO (index.html) --- */
 .product-grid { 
     display: grid; 
-    /* Cambiato minmax da 280px a 100% per mobile, poi 250px su desktop */
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
     gap: 20px; 
 }
@@ -89,7 +84,7 @@ header h1 {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); transition: transform 0.3s;
 }
 .product-card:hover { transform: scale(1.02); }
-.product-card img { width: 100%; height: 200px; object-fit: cover; } /* Altezza ridotta per compattezza */
+.product-card img { width: 100%; height: 200px; object-fit: cover; }
 .product-info { padding: 15px; text-align: center; }
 .product-info h3 { color: var(--colore-secondario); margin: 5px 0; font-size: 1.2em; }
 .product-info p { font-size: 0.9em; color: #666; min-height: 35px; }
@@ -100,18 +95,14 @@ header h1 {
     background-color: var(--colore-secondario); color: var(--colore-testo-chiaro);
     border: none; width: 35px; height: 35px; font-size: 1.5em;
     cursor: pointer; border-radius: 50%; transition: 0.3s;
-    /* Touch friendly */
     display: flex; align-items: center; justify-content: center;
 }
 .quantity-control button:hover { background-color: var(--colore-primario); }
 .quantity-display { width: 40px; text-align: center; font-size: 1.2em; font-weight: 600; margin: 0 10px; color: var(--colore-secondario); }
 
-/* --- ADMIN LAYOUT (GRID & SQUARES) --- */
-.content-container { padding: 20px 5%; max-width: 1200px; margin: auto; }
-
+/* --- ADMIN (admin.html) --- */
 .admin-grid {
     display: grid;
-    /* Qui la magia: si adatta se c'è spazio, altrimenti va a colonna singola */
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
     gap: 30px;
     align-items: stretch;
@@ -125,8 +116,7 @@ header h1 {
     transition: transform 0.3s;
     display: flex;
     flex-direction: column;
-    justify-content: center; 
-    /* Aspect ratio rimosso su mobile tramite media query sotto */
+    justify-content: center;
     aspect-ratio: 1 / 1; 
     min-height: 350px;
 }
@@ -135,15 +125,12 @@ header h1 {
 h2 { 
     color: var(--colore-secondario); 
     border-bottom: 2px solid var(--colore-primario); 
-    padding-bottom: 10px; 
-    margin-bottom: 20px; 
-    text-align: center;
-    font-size: 1.5em; /* Font adattabile */
+    padding-bottom: 10px; margin-bottom: 20px; text-align: center; font-size: 1.5em;
 }
 
 .form-section input, .form-section select {
     width: 100%; padding: 12px; margin-bottom: 15px;
-    border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; /* 16px evita lo zoom automatico su iPhone */
+    border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px;
 }
 .form-section label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--colore-testo-scuro); }
 
@@ -154,89 +141,48 @@ h2 {
     transition: 0.3s;
 }
 
-/* --- DASHBOARD --- */
+/* --- DASHBOARD (dashboard.html) --- */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
 .stat-card {
     background: white; padding: 20px; border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center;
 }
-.stat-value { font-size: 2em; font-weight: bold; color: var(--colore-secondario); word-break: break-all; }
+.stat-value { font-size: 1.8em; font-weight: bold; color: var(--colore-secondario); word-break: break-all; }
+
+/* Bordi Colorati Banner */
+.border-gold { border-left: 5px solid var(--colore-primario); }
+.border-green { border-left: 5px solid var(--colore-successo-verde); }
+.border-red { border-left: 5px solid var(--colore-spese); }
+.border-red .stat-value { color: var(--colore-spese); }
 
 .charts-grid {
     display: grid;
-    /* Su mobile 1 colonna, su desktop 2 */
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: 30px;
 }
-/* Su schermi grandi, metti 2 colonne */
-@media(min-width: 900px) {
-    .charts-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
 .chart-card { 
     background: white; padding: 15px; border-radius: 10px; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-    width: 100%; box-sizing: border-box; /* Previene sbordamenti */
+    width: 100%; box-sizing: border-box;
 }
 
-/* --- MOBILE SPECIFIC (Sotto i 768px) --- */
+/* --- MEDIA QUERY (MOBILE) --- */
 @media (max-width: 768px) {
-    /* Header Fix */
-    header { 
-        padding: 10px 15px; 
-        flex-wrap: wrap; /* Permette al menu di scendere */
-    }
+    header { padding: 10px 15px; flex-wrap: wrap; }
+    header h1 { font-size: 1.4em; max-width: 80%; }
     
-    header h1 {
-        font-size: 1.4em; /* Titolo più piccolo */
-        max-width: 80%;
-    }
-
     .menu-toggle { display: block; }
     
     .nav-links {
-        width: 100%; 
-        flex-direction: column; 
-        height: 0; 
-        overflow: hidden;
-        transition: height 0.3s ease-out;
-        background-color: var(--colore-primario);
-        margin-top: 0;
-        border-radius: 0 0 10px 10px;
+        width: 100%; flex-direction: column; height: 0; overflow: hidden;
+        transition: height 0.3s ease-out; background-color: var(--colore-primario);
+        margin-top: 0; border-radius: 0 0 10px 10px;
     }
-
-    .nav-links.active { 
-        height: auto; 
-        padding-bottom: 15px;
-        margin-top: 10px; /* Stacca il menu dal titolo quando aperto */
-        border-top: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .nav-links a, .nav-links button { 
-        width: 90%; 
-        margin: 5px auto; 
-        text-align: center; 
-        display: block;
-        padding: 12px;
-    }
+    .nav-links.active { height: auto; padding-bottom: 15px; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); }
+    .nav-links a, .nav-links button { width: 90%; margin: 5px auto; text-align: center; display: block; padding: 12px; }
     
-    .nav-links .invia-btn { margin-left: auto; margin-right: auto; }
-
-    /* Admin Fix */
     .admin-grid { grid-template-columns: 1fr; gap: 20px; }
-    .form-section { 
-        aspect-ratio: auto; /* Rimuove la forma quadrata su mobile per salvare spazio */
-        min-height: auto; 
-        padding: 20px;
-    }
-    
-    /* Layout Generale */
-    .content-container, .catalogo-container, .dashboard-container {
-        padding: 20px 15px; /* Meno padding laterale */
-    }
-    
-    /* Fix Grafici */
-    .chart-card canvas {
-        max-height: 300px;
-    }
+    .form-section { aspect-ratio: auto; min-height: auto; padding: 20px; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-card canvas { max-height: 300px; }
 }
