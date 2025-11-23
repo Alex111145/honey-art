@@ -1,24 +1,31 @@
-// Dati Iniziali (Fallback)
-const initialProducts = [
-    { id: 1, name: 'Vasetto Lavanda Elegance', description: 'Miele di lavanda con decorazione lilla.', price: 4.50, img: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=400&fit=crop' },
-    { id: 2, name: 'Miele Nocciola Gourmet', description: 'Miele millefiori con nocciole tostate.', price: 5.20, img: 'https://images.unsplash.com/photo-1593560704563-f176a2eb61db?w=400&h=400&fit=crop' },
-    { id: 3, name: 'Classico Millefiori (300g)', description: 'Il classico miele non trattato.', price: 3.90, img: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400&h=400&fit=crop' },
-    { id: 4, name: 'Barattolo Tè e Miele', description: 'Un vasetto perfetto con infusione al Tè.', price: 4.80, img: 'https://images.unsplash.com/photo-1580959375944-0b94e7db3a69?w=400&h=400&fit=crop' },
-    { id: 5, name: 'Mini Vasetti Set 3 pezzi', description: 'Set di tre piccoli vasetti regalo.', price: 6.50, img: 'https://images.unsplash.com/photo-1518013431117-eb1465fa2c59?w=400&h=400&fit=crop' }
-];
-
 let products = [];
 let quantities = {};
 
-function initializeProducts() {
-    const storedProducts = localStorage.getItem('honeyArtProducts');
-    if (storedProducts) {
-        products = JSON.parse(storedProducts);
-    } else {
-        products = initialProducts;
-        localStorage.setItem('honeyArtProducts', JSON.stringify(products));
+// 1. SCARICA PRODOTTI
+async function initializeProducts() {
+    // Aspetta che il client sia pronto
+    if (!window.supabaseClient) {
+        console.warn("Database non pronto, riprovo...");
+        setTimeout(initializeProducts, 500);
+        return;
     }
-    products.forEach(p => quantities[p.id] = 0);
+    
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('products')
+            .select('*')
+            .order('name'); 
+        
+        if (error) throw error;
+        
+        products = data;
+        products.forEach(p => quantities[p.id] = 0);
+        renderProducts();
+        
+    } catch (err) {
+        console.error("Errore DB:", err);
+        document.getElementById('product-list').innerHTML = '<p style="color:red; text-align:center;">Errore connessione database.</p>';
+    }
 }
 
 function renderProducts() {
@@ -26,6 +33,11 @@ function renderProducts() {
     const catalogoTitle = document.getElementById('catalogo-title');
     if (!productGrid) return;
     
+    if (products.length === 0) {
+        productGrid.innerHTML = '<p style="text-align:center;">Nessun prodotto nel catalogo.</p>';
+        return;
+    }
+
     productGrid.innerHTML = ''; 
     catalogoTitle.textContent = `Bomboniere (${products.length} articoli)`;
 
@@ -34,23 +46,24 @@ function renderProducts() {
         card.className = 'product-card';
         card.setAttribute('data-id', p.id);
         
-        // AGGIUNTA SELECT "CONTANTI / POS" SOTTO LA QUANTITÀ
         card.innerHTML = `
-            <img src="${p.img}" alt="${p.name}">
+            <img src="${p.image_url}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/400?text=No+Image'">
             <div class="product-info">
                 <h3>${p.name}</h3>
-                <p>${p.description}</p>
+                <p>${p.description || ''}</p>
                 <div class="price">€${p.price.toFixed(2).replace('.', ',')}</div>
+                
                 <div class="quantity-control">
                     <button onclick="updateQuantity(${p.id}, -1)">-</button>
                     <span id="qty-${p.id}" class="quantity-display">0</span>
                     <button onclick="updateQuantity(${p.id}, 1)">+</button>
                 </div>
+
                 <div class="payment-selector">
-                    <label>Paga con:</label>
+                    <label>Metodo Pagamento:</label>
                     <select id="pay-method-${p.id}">
-                        <option value="contanti">Contanti 💶</option>
-                        <option value="pos">POS 💳</option>
+                        <option value="contanti">💶 Contanti</option>
+                        <option value="pos">💳 POS / Carta</option>
                     </select>
                 </div>
             </div>
@@ -71,16 +84,13 @@ window.updateQuantity = function(id, delta) {
     let currentQty = quantities[id] || 0;
     let newQty = currentQty + delta;
     if (newQty < 0) newQty = 0; 
-    
     quantities[id] = newQty;
-    const qtyDisplay = document.getElementById(`qty-${id}`);
-    if (qtyDisplay) qtyDisplay.textContent = newQty;
+    document.getElementById(`qty-${id}`).textContent = newQty;
     calculateTotal();
 }
 
-// INVIA ORDINE AGGIORNATO: RAGGRUPPA PER METODO
-window.inviaOrdine = function() {
-    const total = calculateTotal();
+// 3. INVIA ORDINE
+window.inviaOrdine = async function() {
     const items = products.filter(p => quantities[p.id] > 0);
     
     if (items.length === 0) {
@@ -88,7 +98,6 @@ window.inviaOrdine = function() {
         return;
     }
     
-    // Raccogliamo gli item divisi per metodo di pagamento scelto sulla card
     let itemsCash = [];
     let itemsPOS = [];
     let totalCash = 0;
@@ -99,7 +108,6 @@ window.inviaOrdine = function() {
         const itemTotal = item.price * quantities[item.id];
         
         const orderItem = {
-            id: item.id,
             name: item.name,
             quantity: quantities[item.id],
             price: item.price
@@ -114,50 +122,47 @@ window.inviaOrdine = function() {
         }
     });
 
-    const storedSales = localStorage.getItem('honeyArtSales');
-    let sales = storedSales ? JSON.parse(storedSales) : [];
-    const timestamp = new Date().toISOString();
+    const btn = document.querySelector('.invia-btn');
+    const originalText = btn.innerHTML;
+    btn.textContent = "Invio...";
+    btn.disabled = true;
 
-    // Salviamo ordine Contanti (se ce ne sono)
-    if (itemsCash.length > 0) {
-        sales.push({
-            id: Date.now(), // ID univoco
-            date: timestamp,
-            amount: totalCash,
-            method: 'contanti',
-            items: itemsCash
+    try {
+        if (itemsCash.length > 0) {
+            const { error } = await window.supabaseClient.from('sales').insert({
+                total_amount: totalCash,
+                payment_method: 'contanti',
+                items: itemsCash
+            });
+            if (error) throw error;
+        }
+
+        if (itemsPOS.length > 0) {
+            const { error } = await window.supabaseClient.from('sales').insert({
+                total_amount: totalPOS,
+                payment_method: 'pos',
+                items: itemsPOS
+            });
+            if (error) throw error;
+        }
+
+        alert("✅ Ordine salvato!");
+        
+        products.forEach(p => {
+            quantities[p.id] = 0;
+            document.getElementById(`qty-${p.id}`).textContent = 0;
         });
-    }
+        calculateTotal();
 
-    // Salviamo ordine POS (se ce ne sono)
-    if (itemsPOS.length > 0) {
-        sales.push({
-            id: Date.now() + 1, // ID univoco diverso
-            date: timestamp,
-            amount: totalPOS,
-            method: 'pos',
-            items: itemsPOS
-        });
+    } catch (err) {
+        console.error("Errore salvataggio:", err);
+        alert("Errore: " + err.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
-    
-    localStorage.setItem('honeyArtSales', JSON.stringify(sales));
-
-    let msg = "Ordine registrato!\n";
-    if(itemsCash.length > 0) msg += `- Contanti: €${totalCash.toFixed(2)}\n`;
-    if(itemsPOS.length > 0) msg += `- POS: €${totalPOS.toFixed(2)}\n`;
-    
-    alert(msg);
-    
-    // Reset
-    products.forEach(p => {
-        quantities[p.id] = 0;
-        const qtyDisplay = document.getElementById(`qty-${p.id}`);
-        if (qtyDisplay) qtyDisplay.textContent = 0;
-    });
-    calculateTotal();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeProducts();
-    renderProducts();
 });

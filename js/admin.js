@@ -1,67 +1,86 @@
-function inviaProdotto(event) {
+async function inviaProdotto(event) {
     event.preventDefault();
     
+    if (!window.supabaseClient) { alert("Database non connesso!"); return; }
+
     const nome = document.getElementById('nome-prodotto').value.trim();
-    const descrizione = ""; 
     const prezzo = document.getElementById('prezzo-prodotto').value;
     const fileInput = document.getElementById('file-foto');
     const file = fileInput.files[0];
+    const btn = document.getElementById('btn-add-prod');
 
     if (!file) {
-        alert("Attenzione: La foto del prodotto è obbligatoria!");
+        alert("Foto obbligatoria!");
         return;
     }
 
-    const reader = new FileReader();
+    try {
+        btn.textContent = "Caricamento...";
+        btn.disabled = true;
 
-    reader.onloadend = function() {
-        const base64Img = reader.result;
+        // 1. Upload
+        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
+        const { data: uploadData, error: uploadError } = await window.supabaseClient.storage
+            .from('product-images')
+            .upload(fileName, file);
 
-        const storedProducts = localStorage.getItem('honeyArtProducts');
-        let products = storedProducts ? JSON.parse(storedProducts) : [];
-        
-        const newId = (products.length > 0 ? Math.max(...products.map(p => p.id)) : 0) + 1;
+        if (uploadError) throw uploadError;
 
-        const newProduct = {
-            id: newId,
-            name: nome,
-            description: descrizione,
-            price: parseFloat(prezzo),
-            img: base64Img
-        };
-        
-        products.push(newProduct);
-        localStorage.setItem('honeyArtProducts', JSON.stringify(products));
+        // 2. URL
+        const { data: publicUrlData } = window.supabaseClient.storage
+            .from('product-images')
+            .getPublicUrl(fileName);
+        const publicUrl = publicUrlData.publicUrl;
 
-        alert(`Prodotto "${nome}" aggiunto con successo!`);
+        // 3. Insert
+        const { error: insertError } = await window.supabaseClient
+            .from('products')
+            .insert({
+                name: nome,
+                description: '',
+                price: parseFloat(prezzo),
+                image_url: publicUrl
+            });
+
+        if (insertError) throw insertError;
+
+        alert("✅ Prodotto aggiunto!");
         window.location.href = "index.html";
-    }
 
-    reader.readAsDataURL(file);
+    } catch (err) {
+        console.error("Errore:", err);
+        alert("Errore: " + err.message);
+        btn.textContent = "➕ Aggiungi al Catalogo";
+        btn.disabled = false;
+    }
 }
 
-function inviaSpesa(event) {
+async function inviaSpesa(event) {
     event.preventDefault();
     
-    const data = document.getElementById('data-spesa').value;
+    if (!window.supabaseClient) return;
+
+    const dataSpesa = document.getElementById('data-spesa').value;
     const importo = parseFloat(document.getElementById('importo-spesa').value);
     const motivo = document.getElementById('descrizione-spesa').value.trim();
-    const categoria = "Generale"; 
 
-    const storedExpenses = localStorage.getItem('honeyArtExpenses');
-    let expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
+    try {
+        const { error } = await window.supabaseClient
+            .from('expenses')
+            .insert({
+                created_at: new Date(dataSpesa).toISOString(), 
+                amount: -Math.abs(importo),
+                description: motivo,
+                category: 'Generale'
+            });
 
-    const newExpense = {
-        id: Date.now(),
-        date: data,
-        amount: -Math.abs(importo),
-        description: motivo,
-        category: categoria
-    };
-    
-    expenses.push(newExpense);
-    localStorage.setItem('honeyArtExpenses', JSON.stringify(expenses));
+        if (error) throw error;
 
-    alert(`Spesa di €${importo.toFixed(2)} registrata correttamente.`);
-    document.getElementById('spesaForm').reset();
+        alert("✅ Spesa registrata!");
+        document.getElementById('spesaForm').reset();
+
+    } catch (err) {
+        console.error("Errore:", err);
+        alert("Errore: " + err.message);
+    }
 }

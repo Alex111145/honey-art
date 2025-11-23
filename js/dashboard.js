@@ -1,33 +1,40 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     
-    // --- RECUPERO DATI ---
-    const storedSales = localStorage.getItem('honeyArtSales');
-    const sales = storedSales ? JSON.parse(storedSales) : [];
+    // Attendi DB
+    if (!window.supabaseClient) {
+        // Riprova dopo un po' se non è pronto
+        setTimeout(() => location.reload(), 1000);
+        return;
+    }
+
+    // 1. SCARICA DATI
+    let sales = [];
+    let expenses = [];
     
-    const storedExpenses = localStorage.getItem('honeyArtExpenses');
-    const expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
-    
+    try {
+        const { data: salesData, error: sErr } = await window.supabaseClient.from('sales').select('*');
+        if (sErr) throw sErr;
+        sales = salesData;
+
+        const { data: expensesData, error: eErr } = await window.supabaseClient.from('expenses').select('*');
+        if (eErr) throw eErr;
+        expenses = expensesData;
+
+    } catch (err) {
+        console.error("Errore dashboard:", err);
+        return; 
+    }
+
     const hasData = sales.length > 0;
     
-    // --- CALCOLI TOTALI ---
+    // 2. CALCOLI
     let totalRevenue = 0;
-    let totalCash = 0;
-    let totalPOS = 0;
     let totalExpenses = 0;
 
-    sales.forEach(s => {
-        totalRevenue += s.amount;
-        if (s.method === 'contanti') totalCash += s.amount;
-        if (s.method === 'pos') totalPOS += s.amount;
-    });
-
-    expenses.forEach(e => {
-        totalExpenses += Math.abs(e.amount);
-    });
-    
+    sales.forEach(s => totalRevenue += s.total_amount);
+    expenses.forEach(e => totalExpenses += Math.abs(e.amount));
     const saldo = totalRevenue - totalExpenses;
 
-    // Aggiornamento Banner
     if (document.getElementById('saldo-totale')) {
         document.getElementById('saldo-totale').textContent = `€${saldo.toFixed(2).replace('.', ',')}`;
         document.getElementById('guadagno-totale').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
@@ -36,31 +43,29 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
 
-    // --- PREPARAZIONE DATI TEMPORALI (Raggruppamento per Data) ---
-    sales.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // 3. GRAFICI
+    sales.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     const groupedSales = [];
     if (hasData) {
         sales.forEach(s => {
-            const dateStr = new Date(s.date).toLocaleDateString();
+            const dateStr = new Date(s.created_at).toLocaleDateString();
             let group = groupedSales.find(g => g.date === dateStr);
             if (!group) {
                 group = { date: dateStr, pos: 0, cash: 0 };
                 groupedSales.push(group);
             }
-            if (s.method === 'pos') group.pos += s.amount;
-            else group.cash += s.amount;
+            if (s.payment_method === 'pos') group.pos += s.total_amount;
+            else group.cash += s.total_amount;
         });
     }
 
-    // --- GRAFICI ---
-
-    // 1. Andamento Saldo (Full Width)
+    // Grafico Saldo
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
-        const labels = hasData ? sales.map(s => new Date(s.date).toLocaleDateString()) : ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
+        const labels = hasData ? sales.map(s => new Date(s.created_at).toLocaleDateString()) : [];
         let acc = 0;
-        const dataPoints = hasData ? sales.map(s => { acc += s.amount; return acc; }) : [1200, 1800, 500, 2200, 4500, 6000];
+        const dataPoints = hasData ? sales.map(s => { acc += s.total_amount; return acc; }) : [];
 
         new Chart(ctxSaldo, {
             type: 'line',
@@ -71,33 +76,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: dataPoints,
                     borderColor: '#C19F29',
                     borderWidth: 3,
-                    fill: {
-                        target: 'origin',
-                        above: 'rgba(193, 159, 41, 0.2)',
-                        below: 'rgba(220, 53, 69, 0.2)'
-                    },
+                    fill: { target: 'origin', above: 'rgba(193, 159, 41, 0.2)', below: 'rgba(220, 53, 69, 0.2)' },
                     tension: 0.4
                 }]
             },
-            options: { 
-                responsive: true,
-                aspectRatio: window.innerWidth < 768 ? 2 : 4 
-            }
+            options: { responsive: true, aspectRatio: window.innerWidth < 768 ? 2 : 4 }
         });
     }
 
-    // 2. Istogramma Differenza (POS vs Contanti)
+    // Grafico Differenza
     const ctxDiff = document.getElementById('diffChart');
     if (ctxDiff) {
-        let diffLabels, diffData;
-        if (hasData) {
-            diffLabels = groupedSales.map(g => g.date);
-            diffData = groupedSales.map(g => g.pos - g.cash);
-        } else {
-            diffLabels = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu'];
-            diffData = [50, -20, 100, -50, 80, -10];
-        }
-
+        const diffLabels = groupedSales.map(g => g.date);
+        const diffData = groupedSales.map(g => g.pos - g.cash);
         const bgColors = diffData.map(val => val >= 0 ? 'rgba(13, 110, 253, 0.7)' : 'rgba(25, 135, 84, 0.7)');
         const borderColors = diffData.map(val => val >= 0 ? '#0d6efd' : '#198754');
 
@@ -117,34 +108,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 aspectRatio: window.innerWidth < 768 ? 2 : 4,
                 plugins: { legend: { display: false } },
-                scales: {
-                    y: {
-                        grid: {
-                            color: (context) => context.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)',
-                            lineWidth: (context) => context.tick.value === 0 ? 2 : 1
-                        }
-                    }
-                }
+                scales: { y: { grid: { color: c => c.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)', lineWidth: c => c.tick.value === 0 ? 2 : 1 } } }
             }
         });
     }
 
-    // 3. Grafico Contanti (ORA IN LINEA)
+    // Grafico Contanti (Lineare)
     const ctxCash = document.getElementById('cashChart');
     if (ctxCash) {
         let accCash = 0;
-        const cashSales = hasData ? sales.filter(s => s.method === 'contanti') : [];
-        const cashData = hasData ? cashSales.map(s => { accCash += s.amount; return accCash; }) : [200, 400, 450, 800, 1200];
-        const cashLabels = hasData ? cashSales.map(s => new Date(s.date).toLocaleDateString()) : ['Sett 1', 'Sett 2', 'Sett 3', 'Sett 4'];
+        const cashSales = hasData ? sales.filter(s => s.payment_method === 'contanti') : [];
+        const cashData = cashSales.map(s => { accCash += s.total_amount; return accCash; });
+        const cashLabels = cashSales.map(s => new Date(s.created_at).toLocaleDateString());
 
         new Chart(ctxCash, {
-            type: 'line', // CAMBIATO DA 'bar' A 'line'
+            type: 'line',
             data: {
                 labels: cashLabels,
                 datasets: [{
                     label: 'Totale Contanti (€)',
                     data: cashData,
-                    backgroundColor: 'rgba(25, 135, 84, 0.2)', // Verde sfumato per il riempimento
+                    backgroundColor: 'rgba(25, 135, 84, 0.2)',
                     borderColor: '#198754',
                     borderWidth: 2,
                     fill: true,
@@ -155,13 +139,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 4. Grafico POS
+    // Grafico POS (Lineare)
     const ctxPOS = document.getElementById('posChart');
     if (ctxPOS) {
         let accPOS = 0;
-        const posSales = hasData ? sales.filter(s => s.method === 'pos') : [];
-        const posData = hasData ? posSales.map(s => { accPOS += s.amount; return accPOS; }) : [500, 1200, 1500, 2200, 3000];
-        const posLabels = hasData ? posSales.map(s => new Date(s.date).toLocaleDateString()) : ['Sett 1', 'Sett 2', 'Sett 3', 'Sett 4'];
+        const posSales = hasData ? sales.filter(s => s.payment_method === 'pos') : [];
+        const posData = posSales.map(s => { accPOS += s.total_amount; return accPOS; });
+        const posLabels = posSales.map(s => new Date(s.created_at).toLocaleDateString());
 
         new Chart(ctxPOS, {
             type: 'line',
@@ -181,21 +165,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 5. Prodotti Più Venduti
+    // Grafico Prodotti
     const ctxTop = document.getElementById('topProductsChart');
     if (ctxTop) {
         let productCounts = {};
-        
         if (hasData) {
             sales.forEach(order => {
-                order.items.forEach(item => {
-                    productCounts[item.name] = (productCounts[item.name] || 0) + item.quantity;
-                });
+                if (order.items && Array.isArray(order.items)) {
+                    order.items.forEach(item => {
+                        productCounts[item.name] = (productCounts[item.name] || 0) + item.quantity;
+                    });
+                }
             });
-        } else {
-            productCounts = { 'Miele Acacia': 12, 'Set Regalo': 8, 'Vasetto Lavanda': 5, 'Miele Castagno': 15 };
         }
-
+        
         const pLabels = Object.keys(productCounts);
         const pData = Object.values(productCounts);
 
