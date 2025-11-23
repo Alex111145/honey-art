@@ -19,6 +19,7 @@
     </header>
     
     <div class="dashboard-container">
+        
         <div class="stats-grid">
             <div class="stat-card saldo">
                 <h3>Guadagno Totale</h3>
@@ -32,10 +33,16 @@
         
         <div class="charts-grid">
             <div class="chart-card">
-                <h2>Andamento del Saldo Cumulativo</h2>
+                <h2>Andamento del Saldo</h2>
                 <canvas id="liquidazioneChart"></canvas>
             </div>
+            
+            <div class="chart-card">
+                <h2>🏆 Prodotti più Acquistati</h2>
+                <canvas id="topProductsChart"></canvas>
+            </div>
         </div>
+        
     </div>
 
     <script src="js/main.js"></script>

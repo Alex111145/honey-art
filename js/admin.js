@@ -1,48 +1,44 @@
 function inviaProdotto(event) {
     event.preventDefault();
     
-    // Recupera i valori dal form
     const nome = document.getElementById('nome-prodotto').value.trim();
-    const descrizione = document.getElementById('descrizione-prodotto').value.trim();
+    // Descrizione rimossa: usiamo una stringa vuota o generica per compatibilità
+    const descrizione = ""; 
     const prezzo = document.getElementById('prezzo-prodotto').value;
     const fileInput = document.getElementById('file-foto');
-    const file = fileInput.files[0]; // Prende il file caricato
+    const file = fileInput.files[0];
 
     if (!file) {
         alert("Attenzione: La foto del prodotto è obbligatoria!");
         return;
     }
 
-    // Lettore per convertire l'immagine in un formato salvabile (Base64)
     const reader = new FileReader();
 
     reader.onloadend = function() {
-        const base64Img = reader.result; // Questa è l'immagine convertita in stringa
+        const base64Img = reader.result;
 
-        // Recupera prodotti esistenti o inizializza array vuoto
         const storedProducts = localStorage.getItem('honeyArtProducts');
         let products = storedProducts ? JSON.parse(storedProducts) : [];
         
-        // Crea nuovo ID
         const maxId = products.length > 0 ? Math.max(...products.map(p => p.id)) : 0;
         const newId = maxId + 1;
 
         const newProduct = {
             id: newId,
             name: nome,
-            description: descrizione,
+            description: descrizione, // Salva vuoto
             price: parseFloat(prezzo),
-            img: base64Img // Salviamo l'immagine caricata
+            img: base64Img
         };
         
         products.push(newProduct);
         localStorage.setItem('honeyArtProducts', JSON.stringify(products));
 
         alert(`Prodotto "${nome}" aggiunto con successo!`);
-        window.location.href = "index.html"; // Torna al catalogo
+        window.location.href = "index.html";
     }
 
-    // Avvia la lettura del file
     reader.readAsDataURL(file);
 }
 
@@ -52,16 +48,16 @@ function inviaSpesa(event) {
     const data = document.getElementById('data-spesa').value;
     const importo = parseFloat(document.getElementById('importo-spesa').value);
     const motivo = document.getElementById('descrizione-spesa').value.trim();
-    const categoria = document.getElementById('categoria-spesa').value;
+    // Categoria rimossa: usiamo "Generale" come default
+    const categoria = "Generale"; 
 
-    // Recupera spese esistenti o crea nuova lista
     const storedExpenses = localStorage.getItem('honeyArtExpenses');
     let expenses = storedExpenses ? JSON.parse(storedExpenses) : [];
 
     const newExpense = {
-        id: Date.now(), // ID univoco basato sull'orario
+        id: Date.now(),
         date: data,
-        amount: -Math.abs(importo), // Assicura che sia un valore negativo
+        amount: -Math.abs(importo),
         description: motivo,
         category: categoria
     };
@@ -69,8 +65,6 @@ function inviaSpesa(event) {
     expenses.push(newExpense);
     localStorage.setItem('honeyArtExpenses', JSON.stringify(expenses));
 
-    console.log("Spesa salvata:", newExpense);
     alert(`Spesa di €${importo.toFixed(2)} registrata correttamente.`);
-    
     document.getElementById('spesaForm').reset();
 }
