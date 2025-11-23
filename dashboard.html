@@ -23,35 +23,48 @@
         <div class="stats-grid">
             <div class="stat-card border-gold">
                 <h3>💰 Saldo Attuale</h3>
-                <div class="stat-value" id="saldo-totale">€12.500,00</div>
-            </div>
-            <div class="stat-card border-green">
-                <h3>📈 Ricavi Totali</h3>
-                <div class="stat-value" id="guadagno-totale">€18.000,00</div>
+                <div class="stat-value" id="saldo-totale">€0,00</div>
             </div>
             <div class="stat-card border-green">
                 <h3>📅 Ricavi Mese</h3>
-                <div class="stat-value" id="guadagno-mese">€2.500,00</div>
+                <div class="stat-value" id="guadagno-mese">€0,00</div>
             </div>
-            <div class="stat-card border-red">
-                <h3>📉 Spese Totali</h3>
-                <div class="stat-value" id="spesa-totale">-€5.500,00</div>
+            <div class="stat-card border-green">
+                <h3>📈 Ricavi Totali</h3>
+                <div class="stat-value" id="guadagno-totale">€0,00</div>
             </div>
             <div class="stat-card border-red">
                 <h3>📅 Spese Mese</h3>
-                <div class="stat-value" id="spesa-mese">-€800,00</div>
+                <div class="stat-value" id="spesa-mese">€0,00</div>
+            </div>
+            <div class="stat-card border-red">
+                <h3>📉 Spese Totali</h3>
+                <div class="stat-value" id="spesa-totale">€0,00</div>
             </div>
         </div>
         
         <div class="charts-grid">
-            <div class="chart-card">
-                <h2>Andamento Saldo</h2>
+            
+            <div class="chart-card chart-full">
+                <h2>Andamento Saldo Cumulativo</h2>
                 <canvas id="liquidazioneChart"></canvas>
             </div>
+            
             <div class="chart-card">
+                <h2>💶 Acquisti con Contanti</h2>
+                <canvas id="cashChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <h2>💳 Acquisti con POS</h2>
+                <canvas id="posChart"></canvas>
+            </div>
+            
+            <div class="chart-card chart-full">
                 <h2>🏆 Prodotti più Acquistati</h2>
                 <canvas id="topProductsChart"></canvas>
             </div>
+
         </div>
         
     </div>

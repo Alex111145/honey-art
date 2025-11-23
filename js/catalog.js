@@ -70,15 +70,36 @@ window.updateQuantity = function(id, delta) {
     calculateTotal();
 }
 
+// FUNZIONE AGGIORNATA PER GESTIRE POS/CONTANTI
 window.inviaOrdine = function() {
     const total = calculateTotal();
     const items = products.filter(p => quantities[p.id] > 0);
+    const metodo = document.getElementById('metodo-pagamento').value; // 'pos' o 'contanti'
     
     if (items.length === 0) {
-        alert("Nessun prodotto selezionato. Aggiungi gli articoli all'ordine.");
+        alert("Nessun prodotto selezionato.");
         return;
     }
-    alert(`Ordine inviato con successo! Totale: €${total.toFixed(2).replace('.', ',')}.`);
+    
+    // 1. Salva la vendita nello storico (per i grafici dashboard)
+    const storedSales = localStorage.getItem('honeyArtSales');
+    let sales = storedSales ? JSON.parse(storedSales) : [];
+    
+    sales.push({
+        id: Date.now(),
+        date: new Date().toISOString(),
+        amount: total,
+        method: metodo, // Salva se è POS o Contanti
+        items: items
+    });
+    localStorage.setItem('honeyArtSales', JSON.stringify(sales));
+
+    // 2. Aggiorna il contatore "prodotti più venduti" (semplificato nel DB prodotti)
+    // Nota: in una app reale si ricalcolerebbe dallo storico. Qui, per semplicità, non modifichiamo i prodotti.
+    
+    alert(`Ordine di €${total.toFixed(2)} registrato con successo!\nPagamento: ${metodo.toUpperCase()}`);
+    
+    // Reset interfaccia
     products.forEach(p => {
         quantities[p.id] = 0;
         const qtyDisplay = document.getElementById(`qty-${p.id}`);
