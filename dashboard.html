@@ -11,7 +11,7 @@
 <body>
 
     <header>
-        <h1>Grafici e Statistiche</h1>
+        <h1>Statistiche</h1>
         <button class="menu-toggle" onclick="toggleMenu()">☰</button>
         <div class="nav-links">
             <a href="index.html">Bomboniere</a>
@@ -23,7 +23,7 @@
         
         <div class="stats-grid">
             <div class="stat-card border-gold">
-                <h3>💰 Saldo Totale (Utile Netto)</h3>
+                <h3>💰 Saldo Utile Netto</h3>
                 <div class="stat-value" id="saldo-totale">Caricamento...</div>
             </div>
             
@@ -33,35 +33,16 @@
             </div>
 
             <div class="stat-card border-red">
-                <h3>📉 Totale Costo Miele (Debito)</h3>
+                <h3>📉 Debito (Miele + POS)</h3>
                 <div class="stat-value" id="debito-totale">...</div>
             </div>
             
-            <div class="stat-card border-red">
-                <h3>📉 Spese Extra Totali</h3>
-                <div class="stat-value" id="spesa-totale">...</div>
             </div>
-        </div>
         
         <div class="charts-grid">
             <div class="chart-card chart-full">
-                <h2>Andamento Saldo Cumulativo</h2>
+                <h2>Andamento Saldo (Utile Cassa)</h2>
                 <canvas id="liquidazioneChart"></canvas>
-            </div>
-            
-            <div class="chart-card chart-full">
-                <h2>⚖️ Differenza Pagamenti (POS vs Contanti)</h2>
-                <canvas id="diffChart"></canvas>
-            </div>
-            
-            <div class="chart-card">
-                <h2>💶 Acquisti con Contanti</h2>
-                <canvas id="cashChart"></canvas>
-            </div>
-            
-            <div class="chart-card">
-                <h2>💳 Acquisti con POS</h2>
-                <canvas id="posChart"></canvas>
             </div>
             
             <div class="chart-card chart-full">
