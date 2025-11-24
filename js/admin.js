@@ -104,7 +104,7 @@ async function inviaProdotto(event) {
     if (!window.supabaseClient) return;
 
     const nome = document.getElementById('nome-prodotto').value.trim();
-    const utile = parseFloat(document.getElementById('utile-prodotto').value);
+    const prezzo = parseFloat(document.getElementById('prezzo-prodotto').value);
     const file = document.getElementById('file-foto').files[0];
     const btn = document.getElementById('btn-add-prod');
 
@@ -139,7 +139,7 @@ async function inviaProdotto(event) {
                 product_id: prodData[0].id,
                 name: type,
                 cost: costo,
-                price: utile + costo // Formula Automatica
+                price: prezzo
             };
         });
 
@@ -157,20 +157,6 @@ async function inviaProdotto(event) {
 }
 
 // 4. ALTRE FUNZIONI (Spese, Ripristino)
-async function inviaSpesa(event) {
-    event.preventDefault();
-    if (!window.supabaseClient) return;
-    const date = document.getElementById('data-spesa').value;
-    const amount = parseFloat(document.getElementById('importo-spesa').value);
-    const desc = document.getElementById('descrizione-spesa').value;
-    
-    const { error } = await window.supabaseClient.from('expenses').insert({
-        created_at: new Date(date).toISOString(), amount: -Math.abs(amount), description: desc, category: 'Generale'
-    });
-    if(!error) { alert("Spesa salvata"); document.getElementById('spesaForm').reset(); }
-    else alert("Errore: " + error.message);
-}
-
 async function loadHiddenProducts() {
     if (!window.supabaseClient) { if(window.initSupabase) await window.initSupabase(); if(!window.supabaseClient) return; }
     

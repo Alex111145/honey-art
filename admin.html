@@ -37,12 +37,12 @@
                     <label for="nome-prodotto">Nome Modello:</label>
                     <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
                     
-                    <label for="utile-prodotto">Il tuo GUADAGNO (€):</label>
-                    <input type="number" id="utile-prodotto" step="0.01" min="0" required placeholder="Es. 2.50" 
+                    <label for="prezzo-prodotto">Prezzo di Vendita (€):</label>
+                    <input type="number" id="prezzo-prodotto" step="0.01" min="0" required placeholder="Es. 12.00" 
                            title="Margine di guadagno oltre al costo del miele">
                     <p style="font-size:0.8em; color:#666; margin-top:-10px; margin-bottom:15px;">
-                        Genera automaticamente le varianti <b>Acacia</b> e <b>Millefiori</b>.<br>
-                        Prezzo Vendita = Guadagno + Costo Miele.
+                        Imposta il prezzo finale per il cliente (comprensivo di miele, vasetto, ecc).
+                        Verrà applicato identico a tutte le varianti.
                     </p>
 
                     <label for="file-foto">Foto:</label>
@@ -52,18 +52,7 @@
                 </form>
             </div>
             
-            <div class="form-section" style="border-top: 5px solid var(--colore-spese);">
-                <h2 style="color: var(--colore-spese);">📉 Spesa Extra</h2>
-                <form id="spesaForm" onsubmit="inviaSpesa(event)">
-                    <label>Data:</label>
-                    <input type="date" id="data-spesa" required>
-                    <label>Importo (€):</label>
-                    <input type="number" id="importo-spesa" step="0.01" min="0" required>
-                    <label>Descrizione:</label>
-                    <input type="text" id="descrizione-spesa" required>
-                    <button type="submit" style="background-color: var(--colore-spese); color: white;">➖ Registra Spesa</button>
-                </form>
-            </div>
+            
 
             <div class="form-section" style="border-top: 5px solid #666;"> 
                 <h2 style="color: #666;">♻️ Cestino</h2>
