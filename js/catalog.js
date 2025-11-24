@@ -1,7 +1,7 @@
 let products = [];
 let cartQuantities = {}; 
 let carouselIndices = {};
-let hoverIntervals = {}; // Per gestire lo scorrimento automatico al passaggio del mouse
+let autoScrollIntervals = {}; // Memorizza gli intervalli per lo scorrimento automatico
 
 async function initializeProducts() {
     if (!window.supabaseClient) {
@@ -29,7 +29,13 @@ async function initializeProducts() {
 
         cartQuantities = {};
         carouselIndices = {};
-        hoverIntervals = {}; // Reset intervalli
+        
+        // Pulisce vecchi intervalli se presenti
+        for (const pid in autoScrollIntervals) {
+            clearInterval(autoScrollIntervals[pid]);
+        }
+        autoScrollIntervals = {};
+
         products.forEach(p => {
             if (p.product_variants) {
                 p.product_variants.forEach(v => { cartQuantities[v.id] = 0; });
@@ -60,23 +66,24 @@ function renderProducts() {
         const card = document.createElement('div');
         card.className = 'product-card';
         
-        // --- GESTIONE IMMAGINI (CAROSELLO CON HOVER) ---
+        // --- GESTIONE IMMAGINI (CAROSELLO AUTOMATICO 5s) ---
         let imageHTML = '';
         const images = p.product_images || [];
         images.sort((a,b) => a.id - b.id);
         const placeholder = 'https://via.placeholder.com/400?text=No+Image';
 
         if (images.length > 1) {
-            // Aggiunti eventi onmouseenter e onmouseleave per lo scorrimento automatico
-            imageHTML = `<div class="carousel-container" id="carousel-${p.id}" onmouseenter="startHoverCarousel(${p.id})" onmouseleave="stopHoverCarousel(${p.id})">`;
+            // Carosello automatico senza frecce
+            imageHTML = `<div class="carousel-container" id="carousel-${p.id}">`;
             images.forEach((img, index) => {
                 const activeClass = index === 0 ? 'active' : '';
                 imageHTML += `<img src="${img.image_url}" class="carousel-slide ${activeClass}" onerror="this.src='${placeholder}'">`;
             });
-            imageHTML += `
-                <button class="carousel-btn carousel-prev" onclick="moveCarousel(${p.id}, -1)">&#10094;</button>
-                <button class="carousel-btn carousel-next" onclick="moveCarousel(${p.id}, 1)">&#10095;</button>
-            </div>`;
+            imageHTML += `</div>`;
+            
+            // Avvia il timer automatico per questo prodotto
+            startAutoScroll(p.id);
+
         } else {
             let imgUrl = images.length > 0 ? images[0].image_url : placeholder;
             imageHTML = `<img src="${imgUrl}" class="product-main-img" onerror="this.src='${placeholder}'">`;
@@ -125,8 +132,18 @@ function renderProducts() {
     calcTot(); 
 }
 
-// LOGICA CAROSELLO MANUALE (Click bottoni)
-window.moveCarousel = function(productId, direction) {
+// --- LOGICA SCORRIMENTO AUTOMATICO ---
+function startAutoScroll(productId) {
+    // Pulisci per sicurezza
+    if (autoScrollIntervals[productId]) clearInterval(autoScrollIntervals[productId]);
+    
+    // Imposta intervallo di 5 secondi (5000 ms)
+    autoScrollIntervals[productId] = setInterval(() => {
+        moveCarousel(productId, 1);
+    }, 5000);
+}
+
+function moveCarousel(productId, direction) {
     const container = document.getElementById(`carousel-${productId}`);
     if (!container) return;
     
@@ -135,6 +152,7 @@ window.moveCarousel = function(productId, direction) {
 
     let currentIndex = carouselIndices[productId] || 0;
     let newIndex = currentIndex + direction;
+    
     if (newIndex >= slides.length) newIndex = 0;
     if (newIndex < 0) newIndex = slides.length - 1;
     
@@ -146,38 +164,7 @@ window.moveCarousel = function(productId, direction) {
     });
 }
 
-// LOGICA CAROSELLO HOVER (Scorrimento automatico)
-window.startHoverCarousel = function(productId) {
-    // Avvia un intervallo che cambia immagine ogni 1.2 secondi
-    hoverIntervals[productId] = setInterval(() => {
-        moveCarousel(productId, 1);
-    }, 1200);
-}
-
-window.stopHoverCarousel = function(productId) {
-    // Ferma l'intervallo
-    clearInterval(hoverIntervals[productId]);
-    delete hoverIntervals[productId];
-    
-    // Opzionale: Resetta l'immagine alla prima quando il mouse esce
-    resetCarouselToStart(productId);
-}
-
-function resetCarouselToStart(productId) {
-    const container = document.getElementById(`carousel-${productId}`);
-    if (!container) return;
-    const slides = container.querySelectorAll('.carousel-slide');
-    if (slides.length < 2) return;
-
-    carouselIndices[productId] = 0;
-    slides.forEach((slide, idx) => {
-        if (idx === 0) slide.classList.add('active');
-        else slide.classList.remove('active');
-    });
-}
-
-
-// ... ALTRE FUNZIONI (changeVar, updQty, nascondi, inviaOrdine) invariate ...
+// ... ALTRE FUNZIONI UI ...
 window.changeVar = function(pid) {
     const sel = document.getElementById(`var-select-${pid}`);
     const price = parseFloat(sel.options[sel.selectedIndex].dataset.price);

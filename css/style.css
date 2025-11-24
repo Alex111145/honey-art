@@ -81,10 +81,9 @@ header h1 {
     padding: 20px 5%; max-width: 1400px; margin: auto; 
 }
 
-/* --- GRIGLIA PRODOTTI (MODIFICATA: 2 PER RIGA) --- */
+/* --- GRIGLIA PRODOTTI --- */
 .product-grid { 
     display: grid; 
-    /* Force 2 columns */
     grid-template-columns: repeat(2, 1fr); 
     gap: 20px; 
 }
@@ -245,42 +244,29 @@ h2 {
 }
 .chart-full { grid-column: 1 / -1; }
 
-/* --- CAROSELLO IMMAGINI (MODIFICATO: Più piccolo) --- */
+/* --- CAROSELLO IMMAGINI (MODIFICATO: No pulsanti) --- */
 .carousel-container {
     position: relative;
     width: 100%;
-    height: 400px; /* ALTEZZA RIDOTTA */
+    height: 400px; /* Altezza fissa */
     overflow: hidden;
     background: #f9f9f9;
 }
 
 .carousel-slide {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    object-fit: cover; opacity: 0; transition: opacity 0.8s ease-in-out;
+    object-fit: cover; opacity: 0; transition: opacity 1s ease-in-out; /* Transizione fluida */
     z-index: 1;
 }
 .carousel-slide.active { opacity: 1; z-index: 2; position: relative; }
 
-/* Bottoni nascosti di default, appaiono solo in hover */
-.carousel-btn {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.3); color: white;
-    border: none; font-size: 1.5em; cursor: pointer;
-    z-index: 10; transition: all 0.3s;
-    border-radius: 50%; width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; /* NASCOSTI */
-}
-/* Mostra bottoni quando il mouse è sul contenitore */
-.carousel-container:hover .carousel-btn { opacity: 1; }
-.carousel-btn:hover { background-color: rgba(0, 0, 0, 0.7); }
-.carousel-prev { left: 10px; }
-.carousel-next { right: 10px; }
+/* BOTTONI COMPLETAMENTE NASCOSTI */
+.carousel-btn { display: none !important; }
 
-/* Immagine singola (fallback) */
+/* Immagine singola */
 .product-main-img { 
     width: 100%; 
-    height: 160px; /* ALTEZZA RIDOTTA */
+    height: 160px;
     object-fit: cover; 
 }
 
@@ -304,6 +290,5 @@ h2 {
 }
 
 @media (max-width: 768px) {
-    /* SU MOBILE TORNA A 1 COLONNA */
     .product-grid { grid-template-columns: 1fr; }
 }
