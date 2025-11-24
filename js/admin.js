@@ -1,4 +1,4 @@
-// CONFIGURAZIONE: SOLO 2 MIELI
+// CONFIGURAZIONE: SOLO 2 MIELI (Per i banner dei costi)
 const HONEY_TYPES = ['Acacia', 'Millefiori'];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHiddenProducts();
 });
 
-// --- FUNZIONE DI UTILITÀ: ESTRAE I GRAMMI DAL NOME (Per retrocompatibilità e ricalcoli) ---
+// --- FUNZIONE DI UTILITÀ: ESTRAE I GRAMMI DAL NOME ---
 function extractGrams(text) {
     const match = text.match(/(\d+)\s*(g|kg)/i);
     if (!match) return 0;
@@ -78,7 +78,7 @@ window.salvaCostiGlobali = async function() {
         if (allVariants) {
             for (const v of allVariants) {
                 const productName = v.products ? v.products.name : "";
-                const grams = extractGrams(productName); // Legge il peso dal nome (es. "Vasetto 500g")
+                const grams = extractGrams(productName); 
                 
                 if (grams > 0) {
                     const pricePerKg = newCostsPerKg[v.name] || 0;
@@ -98,22 +98,22 @@ window.salvaCostiGlobali = async function() {
     }
 }
 
-// 3. NUOVO PRODOTTO CON TENDINA PESO
+// 3. NUOVO PRODOTTO (Singola Variante)
 async function inviaProdotto(event) {
     event.preventDefault();
     if (!window.supabaseClient) return;
 
     // Recupera i valori
     const nomeBase = document.getElementById('nome-prodotto').value.trim();
-    const grams = parseInt(document.getElementById('peso-prodotto').value); // 50, 500, 1000...
+    const grams = parseInt(document.getElementById('peso-prodotto').value);
+    const tipoMiele = document.getElementById('tipo-miele').value; // 'Acacia' o 'Millefiori'
     const prezzoVendita = parseFloat(document.getElementById('prezzo-prodotto').value);
     const file = document.getElementById('file-foto').files[0];
     const btn = document.getElementById('btn-add-prod');
 
-    // Crea il nome completo (Es: "Vasetto Cuore" + "500g" -> "Vasetto Cuore 500g")
-    // Se è 1000g lo scriviamo come 1kg per estetica, altrimenti g
+    // Costruzione nome (aggiunge anche il tipo di miele nel nome per chiarezza nel catalogo)
     let suffix = grams === 1000 ? '1kg' : `${grams}g`;
-    const fullName = `${nomeBase} ${suffix}`;
+    const fullName = `${nomeBase} ${suffix} (${tipoMiele})`;
 
     if (!file) { alert("Devi caricare una foto!"); return; }
 
@@ -126,7 +126,7 @@ async function inviaProdotto(event) {
         if (upErr) throw upErr;
         const { data: urlData } = window.supabaseClient.storage.from('product-images').getPublicUrl(fileName);
 
-        // 2. Crea Prodotto (con il nome completo di peso)
+        // 2. Crea Prodotto Padre
         const { data: prodData, error: inErr } = await window.supabaseClient
             .from('products')
             .insert({ name: fullName, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
@@ -138,23 +138,22 @@ async function inviaProdotto(event) {
         const pricePerKgMap = {};
         if(honeyData) honeyData.forEach(h => pricePerKgMap[h.name] = h.cost);
 
-        // 4. Genera Varianti
-        const variants = HONEY_TYPES.map(type => {
-            const pricePerKg = pricePerKgMap[type] || 0;
-            const costOfJar = (grams / 1000) * pricePerKg; // Calcolo Costo Vivo
+        // 4. Calcola costo specifico
+        const pricePerKg = pricePerKgMap[tipoMiele] || 0;
+        const costOfJar = (grams / 1000) * pricePerKg; 
 
-            return {
-                product_id: prodData[0].id,
-                name: type,
-                cost: costOfJar,
-                price: prezzoVendita
-            };
-        });
+        // 5. Crea SINGOLA variante
+        const variant = {
+            product_id: prodData[0].id,
+            name: tipoMiele,
+            cost: costOfJar,
+            price: prezzoVendita
+        };
 
-        const { error: vErr } = await window.supabaseClient.from('product_variants').insert(variants);
+        const { error: vErr } = await window.supabaseClient.from('product_variants').insert([variant]);
         if (vErr) throw vErr;
 
-        alert(`✅ Prodotto creato: "${fullName}"\nCosto Acacia: €${variants[0].cost.toFixed(2)}\nCosto Millefiori: €${variants[1].cost.toFixed(2)}`);
+        alert(`✅ Prodotto creato: "${fullName}"\nVariante: ${tipoMiele}`);
         window.location.href = "index.html";
 
     } catch (err) {

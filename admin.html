@@ -40,13 +40,24 @@
                     <label for="nome-prodotto">Nome Modello:</label>
                     <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
                     
-                    <label for="peso-prodotto">Peso Barattolo (Miele):</label>
-                    <select id="peso-prodotto" required style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; background-color: white;">
-                        <option value="50">50 g (Bomboniera Piccola)</option>
-                        <option value="250">250 g</option>
-                        <option value="500">500 g</option>
-                        <option value="1000">1 kg</option>
-                    </select>
+                    <div style="display: flex; gap: 15px;">
+                        <div style="flex: 1;">
+                            <label for="peso-prodotto">Peso Barattolo:</label>
+                            <select id="peso-prodotto" required>
+                                <option value="50">50 g</option>
+                                <option value="250">250 g</option>
+                                <option value="500">500 g</option>
+                                <option value="1000">1 kg</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="tipo-miele">Tipo Miele:</label>
+                            <select id="tipo-miele" required>
+                                <option value="Acacia">Acacia</option>
+                                <option value="Millefiori">Millefiori</option>
+                            </select>
+                        </div>
+                    </div>
                     
                     <label for="prezzo-prodotto">Prezzo di Vendita Finale (€):</label>
                     <input type="number" id="prezzo-prodotto" step="0.01" min="0" required placeholder="Es. 12.00">

@@ -168,6 +168,28 @@ h2 {
 }
 .form-section label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--colore-testo-scuro); }
 
+/* STILE BOTTONE "AGGIUNGI AL CATALOGO" (Nuovo) */
+.form-section button[type="submit"] {
+    background-color: var(--colore-secondario); /* Marrone scuro come Aggiorna Costi */
+    color: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 30px; /* Arrotondato */
+    font-size: 1.2em;
+    font-weight: bold;
+    width: 100%; /* Larghezza piena */
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(91, 66, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.form-section button[type="submit"]:hover {
+    background-color: #3e2d00;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(91, 66, 0, 0.3);
+}
+
 /* --- NUOVO STILE COSTI MIELE --- */
 .honey-banners {
     display: flex;
