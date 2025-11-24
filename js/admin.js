@@ -1,4 +1,4 @@
-// CONFIGURAZIONE: SOLO 2 MIELI (Per i banner dei costi)
+// CONFIGURAZIONE: SOLO 2 MIELI
 const HONEY_TYPES = ['Acacia', 'Millefiori'];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -6,19 +6,17 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHiddenProducts();
 });
 
-// --- FUNZIONE DI UTILITÀ: ESTRAE I GRAMMI DAL NOME ---
+// --- UTILITY ---
 function extractGrams(text) {
     const match = text.match(/(\d+)\s*(g|kg)/i);
     if (!match) return 0;
-    
     let value = parseFloat(match[1]);
     let unit = match[2].toLowerCase();
-
     if (unit === 'kg') return value * 1000;
     return value;
 }
 
-// 1. CARICA I COSTI (AL KG)
+// 1. CARICA COSTI
 async function loadHoneyCosts() {
     if (!window.supabaseClient) {
         if(window.initSupabase) await window.initSupabase();
@@ -26,12 +24,9 @@ async function loadHoneyCosts() {
     }
 
     const container = document.getElementById('honey-banners-container');
-    
     const { data, error } = await window.supabaseClient.from('honey_costs').select('*').order('id');
     
-    if (error) { 
-        container.innerHTML = `<p style="color:red">Errore: ${error.message}</p>`; return; 
-    }
+    if (error) { container.innerHTML = `<p style="color:red">Errore: ${error.message}</p>`; return; }
 
     container.innerHTML = '';
     const costsMap = {};
@@ -39,7 +34,6 @@ async function loadHoneyCosts() {
 
     HONEY_TYPES.forEach(type => {
         const costPerKg = costsMap[type] || 0;
-        
         const card = document.createElement('div');
         card.className = `honey-card type-${type}`; 
         card.innerHTML = `
@@ -55,105 +49,128 @@ async function loadHoneyCosts() {
     });
 }
 
-// 2. SALVA COSTI E RICALCOLA
+// 2. SALVA COSTI
 window.salvaCostiGlobali = async function() {
-    if (!confirm("⚠️ Confermi l'aggiornamento del prezzo di mercato?\nIl costo vivo dei vasetti verrà ricalcolato in base al loro peso.")) return;
+    if (!confirm("⚠️ Confermi l'aggiornamento dei costi al KG?")) return;
 
     const inputs = document.querySelectorAll('.honey-cost-input');
     const newCostsPerKg = {}; 
     inputs.forEach(inp => newCostsPerKg[inp.dataset.type] = parseFloat(inp.value));
 
     const btn = document.querySelector('.btn-global-save');
-    btn.textContent = "Ricalcolo in corso..."; btn.disabled = true;
+    btn.textContent = "Ricalcolo..."; btn.disabled = true;
 
     try {
-        // A. Aggiorna DB Costi
         for (const [name, cost] of Object.entries(newCostsPerKg)) {
             await window.supabaseClient.from('honey_costs').upsert({ name: name, cost: cost }, { onConflict: 'name' });
         }
-
-        // B. Ricalcola Varianti
         const { data: allVariants } = await window.supabaseClient.from('product_variants').select('*, products(name)');
-
         if (allVariants) {
             for (const v of allVariants) {
                 const productName = v.products ? v.products.name : "";
                 const grams = extractGrams(productName); 
-                
                 if (grams > 0) {
                     const pricePerKg = newCostsPerKg[v.name] || 0;
                     const newCostOfJar = (grams / 1000) * pricePerKg;
-
                     await window.supabaseClient.from('product_variants').update({ cost: newCostOfJar }).eq('id', v.id);
                 }
             }
         }
-        
-        alert("✅ Listino aggiornato correttamente!");
-        location.reload(); 
-    } catch (err) {
-        alert("Errore: " + err.message);
-        btn.disabled = false;
-        btn.textContent = "💾 AGGIORNA COSTI AL KG";
-    }
+        alert("✅ Aggiornato!"); location.reload(); 
+    } catch (err) { alert("Errore: " + err.message); btn.disabled = false; btn.textContent = "💾 AGGIORNA COSTI AL KG"; }
 }
 
-// 3. NUOVO PRODOTTO (Singola Variante)
+// 3. NUOVO PRODOTTO (MULTI-GUSTO E PREZZI DIVERSI)
 async function inviaProdotto(event) {
     event.preventDefault();
     if (!window.supabaseClient) return;
 
-    // Recupera i valori
     const nomeBase = document.getElementById('nome-prodotto').value.trim();
     const grams = parseInt(document.getElementById('peso-prodotto').value);
-    const tipoMiele = document.getElementById('tipo-miele').value; // 'Acacia' o 'Millefiori'
-    const prezzoVendita = parseFloat(document.getElementById('prezzo-prodotto').value);
+    const mode = document.getElementById('mode-inserimento').value; // 'both', 'Acacia', 'Millefiori'
     const file = document.getElementById('file-foto').files[0];
     const btn = document.getElementById('btn-add-prod');
 
-    // Costruzione nome (aggiunge anche il tipo di miele nel nome per chiarezza nel catalogo)
-    let suffix = grams === 1000 ? '1kg' : `${grams}g`;
-    const fullName = `${nomeBase} ${suffix} (${tipoMiele})`;
+    // Recupero Prezzi specifici
+    const priceAcacia = parseFloat(document.getElementById('price-acacia').value);
+    const priceMille = parseFloat(document.getElementById('price-millefiori').value);
 
-    if (!file) { alert("Devi caricare una foto!"); return; }
+    // Validazione Prezzi
+    if ((mode === 'both' || mode === 'Acacia') && (!priceAcacia || priceAcacia <= 0)) {
+        alert("Inserisci un prezzo valido per Acacia!"); return;
+    }
+    if ((mode === 'both' || mode === 'Millefiori') && (!priceMille || priceMille <= 0)) {
+        alert("Inserisci un prezzo valido per Millefiori!"); return;
+    }
+
+    // Nome Generico (Es. "Vasetto Cuore 50g")
+    let suffix = grams === 1000 ? '1kg' : `${grams}g`;
+    const fullName = `${nomeBase} ${suffix}`;
+
+    if (!file) { alert("Carica una foto!"); return; }
 
     try {
-        btn.textContent = "Creazione in corso..."; btn.disabled = true;
+        btn.textContent = "Elaborazione..."; btn.disabled = true;
 
-        // 1. Upload Foto
+        // A. Upload Foto
         const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
         const { error: upErr } = await window.supabaseClient.storage.from('product-images').upload(fileName, file);
         if (upErr) throw upErr;
         const { data: urlData } = window.supabaseClient.storage.from('product-images').getPublicUrl(fileName);
 
-        // 2. Crea Prodotto Padre
-        const { data: prodData, error: inErr } = await window.supabaseClient
-            .from('products')
-            .insert({ name: fullName, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
-            .select();
-        if (inErr) throw inErr;
+        // B. Gestione Prodotto Padre (Crea o Recupera)
+        let productId = null;
+        const { data: existingProducts } = await window.supabaseClient.from('products').select('id').eq('name', fullName).limit(1);
 
-        // 3. Recupera costi Kg
+        if (existingProducts && existingProducts.length > 0) {
+            productId = existingProducts[0].id;
+            // Aggiorna foto se prodotto esiste
+            await window.supabaseClient.from('products').update({ image_url: urlData.publicUrl, visible: true }).eq('id', productId);
+        } else {
+            const { data: prodData, error: inErr } = await window.supabaseClient
+                .from('products')
+                .insert({ name: fullName, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
+                .select();
+            if (inErr) throw inErr;
+            productId = prodData[0].id;
+        }
+
+        // C. Calcolo Costi e Preparazione Varianti
         const { data: honeyData } = await window.supabaseClient.from('honey_costs').select('*');
         const pricePerKgMap = {};
         if(honeyData) honeyData.forEach(h => pricePerKgMap[h.name] = h.cost);
 
-        // 4. Calcola costo specifico
-        const pricePerKg = pricePerKgMap[tipoMiele] || 0;
-        const costOfJar = (grams / 1000) * pricePerKg; 
+        const variantsToUpsert = [];
 
-        // 5. Crea SINGOLA variante
-        const variant = {
-            product_id: prodData[0].id,
-            name: tipoMiele,
-            cost: costOfJar,
-            price: prezzoVendita
-        };
+        // Prepara Acacia se richiesto
+        if (mode === 'both' || mode === 'Acacia') {
+            const cost = (grams / 1000) * (pricePerKgMap['Acacia'] || 0);
+            variantsToUpsert.push({
+                product_id: productId,
+                name: 'Acacia',
+                cost: cost,
+                price: priceAcacia
+            });
+        }
 
-        const { error: vErr } = await window.supabaseClient.from('product_variants').insert([variant]);
+        // Prepara Millefiori se richiesto
+        if (mode === 'both' || mode === 'Millefiori') {
+            const cost = (grams / 1000) * (pricePerKgMap['Millefiori'] || 0);
+            variantsToUpsert.push({
+                product_id: productId,
+                name: 'Millefiori',
+                cost: cost,
+                price: priceMille
+            });
+        }
+
+        // D. Invio al DB (Upsert gestisce aggiornamenti o nuovi inserimenti)
+        const { error: vErr } = await window.supabaseClient.from('product_variants')
+            .upsert(variantsToUpsert, { onConflict: 'product_id, name' });
+
         if (vErr) throw vErr;
 
-        alert(`✅ Prodotto creato: "${fullName}"\nVariante: ${tipoMiele}`);
+        alert(`✅ Prodotto Salvato: ${fullName}\nVarianti aggiornate: ${variantsToUpsert.length}`);
         window.location.href = "index.html";
 
     } catch (err) {
@@ -163,10 +180,9 @@ async function inviaProdotto(event) {
     }
 }
 
-// 4. GESTIONE CESTINO
+// 4. CESTINO
 async function loadHiddenProducts() {
     if (!window.supabaseClient) { if(window.initSupabase) await window.initSupabase(); if(!window.supabaseClient) return; }
-    
     const { data } = await window.supabaseClient.from('products').select('*').eq('visible', false);
     const el = document.getElementById('restore-content');
     if (!el) return;

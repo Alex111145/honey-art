@@ -6,6 +6,11 @@
     <title>HoneyArt - Admin</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Stile per nascondere/mostrare i prezzi con transizione */
+        .price-group { transition: all 0.3s ease; overflow: hidden; }
+        .hidden { display: none; }
+    </style>
 </head>
 <body>
 
@@ -40,7 +45,7 @@
                     <label for="nome-prodotto">Nome Modello:</label>
                     <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
                     
-                    <div style="display: flex; gap: 15px;">
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                         <div style="flex: 1;">
                             <label for="peso-prodotto">Peso Barattolo:</label>
                             <select id="peso-prodotto" required>
@@ -51,19 +56,31 @@
                             </select>
                         </div>
                         <div style="flex: 1;">
-                            <label for="tipo-miele">Tipo Miele:</label>
-                            <select id="tipo-miele" required>
-                                <option value="Acacia">Acacia</option>
-                                <option value="Millefiori">Millefiori</option>
+                            <label for="mode-inserimento">Cosa caricare?</label>
+                            <select id="mode-inserimento" required onchange="togglePrezzi()">
+                                <option value="both">Entrambi (Acacia + Millefiori)</option>
+                                <option value="Acacia">Solo Acacia</option>
+                                <option value="Millefiori">Solo Millefiori</option>
                             </select>
                         </div>
                     </div>
-                    
-                    <label for="prezzo-prodotto">Prezzo di Vendita Finale (€):</label>
-                    <input type="number" id="prezzo-prodotto" step="0.01" min="0" required placeholder="Es. 12.00">
-                    <p style="font-size:0.8em; color:#666; margin-top:-10px; margin-bottom:15px;">
-                        Prezzo al cliente (include vasetto, miele, lavoro).
-                    </p>
+
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 15px;">
+                        
+                        <div id="group-acacia" class="price-group">
+                            <label for="price-acacia" style="color: #C19F29;">Prezzo Vendita ACACIA (€):</label>
+                            <input type="number" id="price-acacia" step="0.01" min="0" placeholder="Es. 12.00">
+                        </div>
+
+                        <div id="group-millefiori" class="price-group">
+                            <label for="price-millefiori" style="color: #5B4200;">Prezzo Vendita MILLEFIORI (€):</label>
+                            <input type="number" id="price-millefiori" step="0.01" min="0" placeholder="Es. 10.00">
+                        </div>
+
+                        <p style="font-size:0.8em; color:#666; margin-top:5px; margin-bottom:0;">
+                            Prezzo finale al cliente (vasetto + miele + confezione).
+                        </p>
+                    </div>
 
                     <label for="file-foto">Foto:</label>
                     <input type="file" id="file-foto" accept="image/*" required>
@@ -82,6 +99,28 @@
 
         </div>
     </div>
+
+    <script>
+        // Funzione visuale per nascondere i campi prezzo non necessari
+        function togglePrezzi() {
+            const mode = document.getElementById('mode-inserimento').value;
+            const groupAcacia = document.getElementById('group-acacia');
+            const groupMille = document.getElementById('group-millefiori');
+
+            if (mode === 'both') {
+                groupAcacia.classList.remove('hidden');
+                groupMille.classList.remove('hidden');
+            } else if (mode === 'Acacia') {
+                groupAcacia.classList.remove('hidden');
+                groupMille.classList.add('hidden');
+            } else if (mode === 'Millefiori') {
+                groupAcacia.classList.add('hidden');
+                groupMille.classList.remove('hidden');
+            }
+        }
+        // Esegui all'avvio
+        togglePrezzi();
+    </script>
 
     <script src="js/env.js"></script>
     <script src="js/main.js"></script>
