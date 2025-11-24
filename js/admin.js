@@ -6,9 +6,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHiddenProducts();
 });
 
-// 1. CARICA I COSTI E GENERA LE CARD (NUOVO DESIGN)
+// --- FUNZIONE DI UTILITÀ: ESTRAE I GRAMMI DAL NOME (Per retrocompatibilità e ricalcoli) ---
+function extractGrams(text) {
+    const match = text.match(/(\d+)\s*(g|kg)/i);
+    if (!match) return 0;
+    
+    let value = parseFloat(match[1]);
+    let unit = match[2].toLowerCase();
+
+    if (unit === 'kg') return value * 1000;
+    return value;
+}
+
+// 1. CARICA I COSTI (AL KG)
 async function loadHoneyCosts() {
-    // Attesa attiva del client
     if (!window.supabaseClient) {
         if(window.initSupabase) await window.initSupabase();
         if (!window.supabaseClient) return;
@@ -16,15 +27,10 @@ async function loadHoneyCosts() {
 
     const container = document.getElementById('honey-banners-container');
     
-    const { data, error } = await window.supabaseClient
-        .from('honey_costs')
-        .select('*')
-        .order('id');
+    const { data, error } = await window.supabaseClient.from('honey_costs').select('*').order('id');
     
     if (error) { 
-        console.error(error); 
-        container.innerHTML = `<p style="color:red">Errore caricamento: ${error.message}</p>`;
-        return; 
+        container.innerHTML = `<p style="color:red">Errore: ${error.message}</p>`; return; 
     }
 
     container.innerHTML = '';
@@ -32,138 +38,133 @@ async function loadHoneyCosts() {
     if (data) data.forEach(row => costsMap[row.name] = row.cost);
 
     HONEY_TYPES.forEach(type => {
-        const cost = costsMap[type] || 0;
+        const costPerKg = costsMap[type] || 0;
         
-        // Creazione Card
         const card = document.createElement('div');
-        // Aggiunge classe dinamica 'type-Acacia' o 'type-Millefiori' per il colore
         card.className = `honey-card type-${type}`; 
-        
         card.innerHTML = `
             <span class="honey-icon">🍯</span>
             <div class="honey-title">${type}</div>
             <div class="honey-input-wrapper">
-                <span>€</span>
-                <input type="number" step="0.01" class="honey-cost-input" data-type="${type}" value="${cost.toFixed(2)}">
+                <span>€/Kg</span>
+                <input type="number" step="0.01" class="honey-cost-input" data-type="${type}" value="${costPerKg.toFixed(2)}">
             </div>
-            <p style="font-size:0.8em; color:#888; margin-top:10px;">Costo Debito / pz</p>
+            <p style="font-size:0.8em; color:#888; margin-top:10px;">Prezzo di mercato</p>
         `;
         container.appendChild(card);
     });
 }
 
-// 2. SALVA COSTI E AGGIORNA TUTTO IL DB
+// 2. SALVA COSTI E RICALCOLA
 window.salvaCostiGlobali = async function() {
-    if (!confirm("Confermi l'aggiornamento dei costi?\nQuesto ricalcolerà i prezzi di vendita di TUTTI i prodotti nel catalogo mantenendo il tuo margine di guadagno.")) return;
+    if (!confirm("⚠️ Confermi l'aggiornamento del prezzo di mercato?\nIl costo vivo dei vasetti verrà ricalcolato in base al loro peso.")) return;
 
     const inputs = document.querySelectorAll('.honey-cost-input');
-    const newCosts = [];
-    inputs.forEach(inp => {
-        newCosts.push({ name: inp.dataset.type, cost: parseFloat(inp.value) });
-    });
+    const newCostsPerKg = {}; 
+    inputs.forEach(inp => newCostsPerKg[inp.dataset.type] = parseFloat(inp.value));
 
     const btn = document.querySelector('.btn-global-save');
-    btn.textContent = "Aggiornamento in corso..."; btn.disabled = true;
+    btn.textContent = "Ricalcolo in corso..."; btn.disabled = true;
 
     try {
-        // A. Aggiorna tabella honey_costs
-        for (const item of newCosts) {
-            await window.supabaseClient
-                .from('honey_costs')
-                .upsert({ name: item.name, cost: item.cost }, { onConflict: 'name' });
+        // A. Aggiorna DB Costi
+        for (const [name, cost] of Object.entries(newCostsPerKg)) {
+            await window.supabaseClient.from('honey_costs').upsert({ name: name, cost: cost }, { onConflict: 'name' });
         }
 
-        // B. Aggiorna tutti i prodotti
-        // Logica: Mantiene il margine invariato aggiornando il prezzo finale
-        for (const item of newCosts) {
-            const { data: variants } = await window.supabaseClient
-                .from('product_variants')
-                .select('*')
-                .eq('name', item.name);
-            
-            if (variants) {
-                for (const v of variants) {
-                    const oldCost = v.cost;
-                    const oldPrice = v.price;
-                    const margin = oldPrice - oldCost; 
-                    const newPrice = margin + item.cost;
-                    
-                    await window.supabaseClient
-                        .from('product_variants')
-                        .update({ cost: item.cost, price: newPrice })
-                        .eq('id', v.id);
+        // B. Ricalcola Varianti
+        const { data: allVariants } = await window.supabaseClient.from('product_variants').select('*, products(name)');
+
+        if (allVariants) {
+            for (const v of allVariants) {
+                const productName = v.products ? v.products.name : "";
+                const grams = extractGrams(productName); // Legge il peso dal nome (es. "Vasetto 500g")
+                
+                if (grams > 0) {
+                    const pricePerKg = newCostsPerKg[v.name] || 0;
+                    const newCostOfJar = (grams / 1000) * pricePerKg;
+
+                    await window.supabaseClient.from('product_variants').update({ cost: newCostOfJar }).eq('id', v.id);
                 }
             }
         }
-        alert("✅ Listino aggiornato con successo!");
+        
+        alert("✅ Listino aggiornato correttamente!");
         location.reload(); 
     } catch (err) {
-        alert("Errore aggiornamento: " + err.message);
+        alert("Errore: " + err.message);
         btn.disabled = false;
-        btn.textContent = "💾 AGGIORNA LISTINO E STATISTICHE";
+        btn.textContent = "💾 AGGIORNA COSTI AL KG";
     }
 }
 
-// 3. CREA PRODOTTO (LOGICA PREZZO FISSO)
+// 3. NUOVO PRODOTTO CON TENDINA PESO
 async function inviaProdotto(event) {
     event.preventDefault();
     if (!window.supabaseClient) return;
 
-    const nome = document.getElementById('nome-prodotto').value.trim();
-    // ORA LEGGE IL PREZZO FINALE, NON L'UTILE
-    const prezzo = parseFloat(document.getElementById('prezzo-prodotto').value);
+    // Recupera i valori
+    const nomeBase = document.getElementById('nome-prodotto').value.trim();
+    const grams = parseInt(document.getElementById('peso-prodotto').value); // 50, 500, 1000...
+    const prezzoVendita = parseFloat(document.getElementById('prezzo-prodotto').value);
     const file = document.getElementById('file-foto').files[0];
     const btn = document.getElementById('btn-add-prod');
+
+    // Crea il nome completo (Es: "Vasetto Cuore" + "500g" -> "Vasetto Cuore 500g")
+    // Se è 1000g lo scriviamo come 1kg per estetica, altrimenti g
+    let suffix = grams === 1000 ? '1kg' : `${grams}g`;
+    const fullName = `${nomeBase} ${suffix}`;
 
     if (!file) { alert("Devi caricare una foto!"); return; }
 
     try {
-        btn.textContent = "Caricamento in corso..."; btn.disabled = true;
+        btn.textContent = "Creazione in corso..."; btn.disabled = true;
 
         // 1. Upload Foto
         const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
         const { error: upErr } = await window.supabaseClient.storage.from('product-images').upload(fileName, file);
         if (upErr) throw upErr;
-        
         const { data: urlData } = window.supabaseClient.storage.from('product-images').getPublicUrl(fileName);
 
-        // 2. Crea Prodotto (Padre)
+        // 2. Crea Prodotto (con il nome completo di peso)
         const { data: prodData, error: inErr } = await window.supabaseClient
             .from('products')
-            .insert({ name: nome, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
+            .insert({ name: fullName, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
             .select();
         if (inErr) throw inErr;
 
-        // 3. Recupera costi attuali
+        // 3. Recupera costi Kg
         const { data: honeyData } = await window.supabaseClient.from('honey_costs').select('*');
-        const honeyMap = {};
-        if(honeyData) honeyData.forEach(h => honeyMap[h.name] = h.cost);
+        const pricePerKgMap = {};
+        if(honeyData) honeyData.forEach(h => pricePerKgMap[h.name] = h.cost);
 
-        // 4. Genera Varianti (Acacia e Millefiori)
+        // 4. Genera Varianti
         const variants = HONEY_TYPES.map(type => {
-            const costo = honeyMap[type] || 0;
+            const pricePerKg = pricePerKgMap[type] || 0;
+            const costOfJar = (grams / 1000) * pricePerKg; // Calcolo Costo Vivo
+
             return {
                 product_id: prodData[0].id,
                 name: type,
-                cost: costo,
-                price: prezzo // Applica lo stesso prezzo finale a entrambe le varianti
+                cost: costOfJar,
+                price: prezzoVendita
             };
         });
 
         const { error: vErr } = await window.supabaseClient.from('product_variants').insert(variants);
         if (vErr) throw vErr;
 
-        alert("✅ Prodotto creato!");
+        alert(`✅ Prodotto creato: "${fullName}"\nCosto Acacia: €${variants[0].cost.toFixed(2)}\nCosto Millefiori: €${variants[1].cost.toFixed(2)}`);
         window.location.href = "index.html";
 
     } catch (err) {
         alert("Errore: " + err.message);
-        btn.textContent = "➕ Crea Listino Automatico";
+        btn.textContent = "➕ Aggiungi al Catalogo";
         btn.disabled = false;
     }
 }
 
-// 4. ALTRE FUNZIONI
+// 4. GESTIONE CESTINO
 async function loadHiddenProducts() {
     if (!window.supabaseClient) { if(window.initSupabase) await window.initSupabase(); if(!window.supabaseClient) return; }
     
@@ -181,5 +182,5 @@ async function loadHiddenProducts() {
 window.ripristina = async function(id) {
     await window.supabaseClient.from('products').update({ visible: true }).eq('id', id);
     loadHiddenProducts();
-    alert("Prodotto ripristinato nel catalogo!");
+    alert("Prodotto ripristinato!");
 }
