@@ -20,16 +20,18 @@
     
     <div class="content-container">
         
-        <h2 style="text-align:center; color: var(--colore-secondario);">🍯 Costi Miele Base</h2>
+        <h2 style="text-align:center; border:none; margin-bottom:10px; color: var(--colore-secondario);">🍯 Costi Miele Base</h2>
+        
         <div class="honey-banners" id="honey-banners-container">
-            <p style="text-align:center;">Caricamento costi dal DB...</p>
+            <p style="text-align:center;">Caricamento...</p>
         </div>
+        
         <p style="text-align:center; font-size:0.9em; color:#666; margin-bottom:20px;">
-            Modifica i costi qui sotto e premi "Aggiorna" per ricalcolare automaticamente i prezzi di vendita di tutto il catalogo.
+            Modifica i costi e premi "Aggiorna" per allineare i prezzi di vendita mantenendo il tuo margine.
         </p>
         <button onclick="salvaCostiGlobali()" class="btn-global-save">💾 AGGIORNA LISTINO E STATISTICHE</button>
 
-        <div class="admin-grid" style="margin-top: 40px;">
+        <div class="admin-grid" style="margin-top: 50px;">
             
             <div class="form-section">
                 <h2>📦 Nuovo Prodotto</h2>
@@ -37,23 +39,20 @@
                     <label for="nome-prodotto">Nome Modello:</label>
                     <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
                     
-                    <label for="prezzo-prodotto">Prezzo di Vendita (€):</label>
+                    <label for="prezzo-prodotto">Prezzo di Vendita Finale (€):</label>
                     <input type="number" id="prezzo-prodotto" step="0.01" min="0" required placeholder="Es. 12.00" 
-                           title="Margine di guadagno oltre al costo del miele">
+                           title="Il prezzo finale per il cliente">
                     <p style="font-size:0.8em; color:#666; margin-top:-10px; margin-bottom:15px;">
-                        Imposta il prezzo finale per il cliente (comprensivo di miele, vasetto, ecc).
-                        Verrà applicato identico a tutte le varianti.
+                        Inserisci il prezzo finale al pubblico. Verrà applicato identico sia per Acacia che per Millefiori.
                     </p>
 
                     <label for="file-foto">Foto:</label>
                     <input type="file" id="file-foto" accept="image/*" required>
                     
-                    <button type="submit" id="btn-add-prod">➕ Crea Listino Automatico</button>
+                    <button type="submit" id="btn-add-prod">➕ Aggiungi al Catalogo</button>
                 </form>
             </div>
             
-            
-
             <div class="form-section" style="border-top: 5px solid #666;"> 
                 <h2 style="color: #666;">♻️ Cestino</h2>
                 <details>

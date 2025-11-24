@@ -6,12 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHiddenProducts();
 });
 
-// 1. CARICA I COSTI NEI BANNER
+// 1. CARICA I COSTI E GENERA LE CARD (NUOVO DESIGN)
 async function loadHoneyCosts() {
     // Attesa attiva del client
     if (!window.supabaseClient) {
         if(window.initSupabase) await window.initSupabase();
-        if (!window.supabaseClient) return; // Se fallisce ancora, esci
+        if (!window.supabaseClient) return;
     }
 
     const container = document.getElementById('honey-banners-container');
@@ -33,22 +33,28 @@ async function loadHoneyCosts() {
 
     HONEY_TYPES.forEach(type => {
         const cost = costsMap[type] || 0;
-        const div = document.createElement('div');
-        div.className = 'honey-banner-card';
-        div.innerHTML = `
-            <span class="h-label">${type}</span>
-            <div class="h-input-group">
-                <span>Costo Debito: €</span>
+        
+        // Creazione Card
+        const card = document.createElement('div');
+        // Aggiunge classe dinamica 'type-Acacia' o 'type-Millefiori' per il colore
+        card.className = `honey-card type-${type}`; 
+        
+        card.innerHTML = `
+            <span class="honey-icon">🍯</span>
+            <div class="honey-title">${type}</div>
+            <div class="honey-input-wrapper">
+                <span>€</span>
                 <input type="number" step="0.01" class="honey-cost-input" data-type="${type}" value="${cost.toFixed(2)}">
             </div>
+            <p style="font-size:0.8em; color:#888; margin-top:10px;">Costo Debito / pz</p>
         `;
-        container.appendChild(div);
+        container.appendChild(card);
     });
 }
 
 // 2. SALVA COSTI E AGGIORNA TUTTO IL DB
 window.salvaCostiGlobali = async function() {
-    if (!confirm("Confermi l'aggiornamento dei costi?\nQuesto ricalcolerà i prezzi di vendita di TUTTI i prodotti nel catalogo mantenendo il tuo guadagno fisso.")) return;
+    if (!confirm("Confermi l'aggiornamento dei costi?\nQuesto ricalcolerà i prezzi di vendita di TUTTI i prodotti nel catalogo mantenendo il tuo margine di guadagno.")) return;
 
     const inputs = document.querySelectorAll('.honey-cost-input');
     const newCosts = [];
@@ -68,7 +74,7 @@ window.salvaCostiGlobali = async function() {
         }
 
         // B. Aggiorna tutti i prodotti
-        // Logica: Prezzo = Utile + Costo. Quindi NuovoPrezzo = (VecchioPrezzo - VecchioCosto) + NuovoCosto
+        // Logica: Mantiene il margine invariato aggiornando il prezzo finale
         for (const item of newCosts) {
             const { data: variants } = await window.supabaseClient
                 .from('product_variants')
@@ -79,7 +85,7 @@ window.salvaCostiGlobali = async function() {
                 for (const v of variants) {
                     const oldCost = v.cost;
                     const oldPrice = v.price;
-                    const margin = oldPrice - oldCost; // L'utile che avevi impostato
+                    const margin = oldPrice - oldCost; 
                     const newPrice = margin + item.cost;
                     
                     await window.supabaseClient
@@ -98,12 +104,13 @@ window.salvaCostiGlobali = async function() {
     }
 }
 
-// 3. CREA PRODOTTO AUTOMATICO
+// 3. CREA PRODOTTO (LOGICA PREZZO FISSO)
 async function inviaProdotto(event) {
     event.preventDefault();
     if (!window.supabaseClient) return;
 
     const nome = document.getElementById('nome-prodotto').value.trim();
+    // ORA LEGGE IL PREZZO FINALE, NON L'UTILE
     const prezzo = parseFloat(document.getElementById('prezzo-prodotto').value);
     const file = document.getElementById('file-foto').files[0];
     const btn = document.getElementById('btn-add-prod');
@@ -139,7 +146,7 @@ async function inviaProdotto(event) {
                 product_id: prodData[0].id,
                 name: type,
                 cost: costo,
-                price: prezzo
+                price: prezzo // Applica lo stesso prezzo finale a entrambe le varianti
             };
         });
 
@@ -156,7 +163,7 @@ async function inviaProdotto(event) {
     }
 }
 
-// 4. ALTRE FUNZIONI (Spese, Ripristino)
+// 4. ALTRE FUNZIONI
 async function loadHiddenProducts() {
     if (!window.supabaseClient) { if(window.initSupabase) await window.initSupabase(); if(!window.supabaseClient) return; }
     

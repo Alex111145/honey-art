@@ -154,7 +154,7 @@ header h1 {
     background-color: white; padding: 30px; border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     display: flex; flex-direction: column; justify-content: center;
-    min-height: 450px; 
+    min-height: auto; 
     height: 100%;
 }
 h2 { 
@@ -168,39 +168,59 @@ h2 {
 }
 .form-section label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--colore-testo-scuro); }
 
-/* VARIANTI FORM ADMIN */
-.variants-section {
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #eee;
-    margin-bottom: 15px;
-}
-.variant-row {
+/* --- NUOVO STILE COSTI MIELE --- */
+.honey-banners {
     display: flex;
-    gap: 10px;
-    margin-bottom: 10px;
+    justify-content: center;
+    gap: 25px;
+    flex-wrap: wrap;
+    margin: 30px 0;
 }
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    width: auto;
-    margin-top: 5px;
+.honey-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    width: 220px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    border-top: 8px solid #ccc;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
-.btn-remove-var {
-    background: none; border: none; cursor: pointer; color: red;
+.honey-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.15); }
+
+/* Colori specifici per tipo di miele */
+.honey-card.type-Acacia { border-color: #F4D03F; } /* Giallo Oro */
+.honey-card.type-Millefiori { border-color: #D35400; } /* Ambra Scuro */
+
+.honey-icon { font-size: 3em; margin-bottom: 10px; display: block; }
+.honey-title { 
+    font-size: 1.4em; font-weight: bold; color: var(--colore-secondario); 
+    margin: 10px 0 20px 0; letter-spacing: 0.5px;
 }
 
-.form-section button[type="submit"] {
-    background-color: var(--colore-successo); color: var(--colore-testo-scuro);
-    border: none; padding: 15px; border-radius: 8px; margin-top: auto;
-    cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%;
+.honey-input-wrapper {
+    display: flex; align-items: center; justify-content: center;
+    background-color: #f8f9fa; border: 1px solid #eee;
+    padding: 10px; border-radius: 8px;
 }
+.honey-input-wrapper span { font-size: 1.2em; color: #666; font-weight: bold; margin-right: 5px; }
+.honey-cost-input {
+    width: 90px !important; margin: 0 !important; padding: 5px !important;
+    text-align: center; font-size: 1.3em !important; font-weight: bold;
+    color: var(--colore-secondario); border: none !important; background: transparent;
+}
+.honey-cost-input:focus { outline: none; border-bottom: 2px solid var(--colore-primario) !important; }
+
+/* Bottone Aggiorna */
+.btn-global-save {
+    background-color: var(--colore-secondario); color: white;
+    padding: 15px 40px; font-size: 1.1em; border: none; border-radius: 30px;
+    cursor: pointer; display: block; margin: 0 auto;
+    box-shadow: 0 4px 15px rgba(91, 66, 0, 0.3);
+    transition: 0.3s;
+}
+.btn-global-save:hover { background-color: #3e2d00; transform: scale(1.05); }
+
 
 /* --- DASHBOARD --- */
 .stats-grid { 
@@ -248,4 +268,7 @@ h2 {
     
     .admin-grid { grid-template-columns: 1fr; }
     .form-section { min-height: auto; height: auto; }
+    
+    .honey-banners { gap: 15px; }
+    .honey-card { width: 100%; }
 }
