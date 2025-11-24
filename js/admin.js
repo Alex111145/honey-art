@@ -3,8 +3,7 @@ const HONEY_TYPES = ['Acacia', 'Millefiori'];
 
 document.addEventListener('DOMContentLoaded', () => {
     loadHoneyCosts();
-    loadHiddenProducts();
-    loadEditableProducts(); // Carica la lista modifica
+    loadEditableProducts(); // Carica il listino completo
 });
 
 // UTILITY
@@ -17,7 +16,7 @@ function extractGrams(text) {
     return value;
 }
 
-// 1. CARICA COSTI MIELE (BANNER)
+// 1. CARICA COSTI MIELE
 async function loadHoneyCosts() {
     if (!window.supabaseClient) {
         if(window.initSupabase) await window.initSupabase();
@@ -28,7 +27,6 @@ async function loadHoneyCosts() {
     if(!container) return;
 
     const { data, error } = await window.supabaseClient.from('honey_costs').select('*').order('id');
-    
     if (error) { container.innerHTML = `<p style="color:red">Errore: ${error.message}</p>`; return; }
 
     container.innerHTML = '';
@@ -109,7 +107,6 @@ async function inviaProdotto(event) {
     try {
         btn.textContent = "Caricamento..."; btn.disabled = true;
 
-        // A. Upload Foto
         const uploadedImageUrls = [];
         for (let i = 0; i < fileInput.files.length; i++) {
             const file = fileInput.files[i];
@@ -120,7 +117,6 @@ async function inviaProdotto(event) {
             uploadedImageUrls.push(urlData.publicUrl);
         }
 
-        // B. Prodotto Padre
         let productId = null;
         const { data: existingProducts } = await window.supabaseClient.from('products').select('id').eq('name', fullName).limit(1);
 
@@ -134,13 +130,11 @@ async function inviaProdotto(event) {
             productId = prodData[0].id;
         }
 
-        // C. Salva Foto
         if (uploadedImageUrls.length > 0) {
             const imagesToInsert = uploadedImageUrls.map(url => ({ product_id: productId, image_url: url }));
             await window.supabaseClient.from('product_images').insert(imagesToInsert);
         }
 
-        // D. Varianti
         const { data: honeyData } = await window.supabaseClient.from('honey_costs').select('*');
         const pricePerKgMap = {};
         if(honeyData) honeyData.forEach(h => pricePerKgMap[h.name] = h.cost);
@@ -169,7 +163,7 @@ async function inviaProdotto(event) {
     }
 }
 
-// 4. CARICA LISTA MODIFICABILE
+// 4. CARICA LISTINO DI SEMPRE
 async function loadEditableProducts() {
     if (!window.supabaseClient) { 
         if(window.initSupabase) await window.initSupabase();
@@ -179,11 +173,10 @@ async function loadEditableProducts() {
     const container = document.getElementById('edit-products-list');
     if (!container) return;
 
-    // Fetch prodotti + varianti + immagini
+    // Prendi TUTTI i prodotti (visibili e non)
     const { data: products, error } = await window.supabaseClient
         .from('products')
         .select('*, product_variants(*), product_images(*)')
-        .eq('visible', true)
         .order('name');
 
     if (error) { container.innerHTML = '<p>Errore caricamento.</p>'; return; }
@@ -192,17 +185,18 @@ async function loadEditableProducts() {
     container.innerHTML = '';
 
     products.forEach(p => {
-        // Card Prodotto
-        const card = document.createElement('div');
-        card.className = 'edit-card';
+        const isHidden = !p.visible;
+        const cardClass = isHidden ? 'edit-card is-hidden' : 'edit-card';
+        const statusLabel = isHidden ? '<span style="color:#dc3545; font-size:0.8em; font-weight:bold; margin-left:5px;">(NASCOSTO)</span>' : '';
         
-        // Anteprima foto
+        const card = document.createElement('div');
+        card.className = cardClass;
+        
         let imgHtml = '';
         if (p.product_images && p.product_images.length > 0) {
             imgHtml = `<img src="${p.product_images[0].image_url}" class="img-preview-mini">`;
         }
 
-        // HTML Varianti
         let variantsHtml = '';
         if (p.product_variants) {
             p.product_variants.sort((a,b) => a.name.localeCompare(b.name)).forEach(v => {
@@ -215,77 +209,73 @@ async function loadEditableProducts() {
             });
         }
 
+        // Bottoni Dinamici
+        let visibilityBtn = '';
+        if(isHidden) {
+            visibilityBtn = `<button class="btn-success" onclick="toggleVisibility(${p.id}, true)">Rimetti a listino</button>`;
+        } else {
+            visibilityBtn = `<button class="btn-secondary" onclick="toggleVisibility(${p.id}, false)">Nascondi</button>`;
+        }
+
         card.innerHTML = `
             <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
                 ${imgHtml}
                 <div style="flex:1;">
+                    <div style="margin-bottom:5px;">${statusLabel}</div>
                     <input type="text" class="input-prod-name" value="${p.name}" style="width:100%; font-weight:bold;">
                 </div>
             </div>
             ${variantsHtml}
             <button class="btn-save-item" onclick="saveProductChanges(${p.id}, this)">Salva Modifiche</button>
+            <div class="actions-row">
+                ${visibilityBtn}
+                <button class="btn-danger" onclick="deleteProductPermanently(${p.id})">Elimina per sempre</button>
+            </div>
         `;
         container.appendChild(card);
     });
 }
 
-// 5. SALVA SINGOLO PRODOTTO MODIFICATO
+// 5. AZIONI PRODOTTO
 window.saveProductChanges = async function(productId, btn) {
     const card = btn.closest('.edit-card');
     const newName = card.querySelector('.input-prod-name').value.trim();
     const varInputs = card.querySelectorAll('.input-var-price');
     
     if (!newName) { alert("Il nome non può essere vuoto"); return; }
-
     btn.textContent = "Salvataggio..."; btn.disabled = true;
 
     try {
-        // 1. Aggiorna Nome Prodotto
-        const { error: pErr } = await window.supabaseClient
-            .from('products')
-            .update({ name: newName })
-            .eq('id', productId);
-        if(pErr) throw pErr;
-
-        // 2. Aggiorna Prezzi Varianti
+        await window.supabaseClient.from('products').update({ name: newName }).eq('id', productId);
         for (const inp of varInputs) {
             const vid = inp.dataset.vid;
             const newPrice = parseFloat(inp.value);
             if (vid && newPrice >= 0) {
-                await window.supabaseClient
-                    .from('product_variants')
-                    .update({ price: newPrice })
-                    .eq('id', vid);
+                await window.supabaseClient.from('product_variants').update({ price: newPrice }).eq('id', vid);
             }
         }
-
         alert("✅ Modifiche salvate!");
-    } catch (err) {
-        alert("Errore salvataggio: " + err.message);
-    } finally {
-        btn.textContent = "Salva Modifiche";
-        btn.disabled = false;
-    }
+    } catch (err) { alert("Errore: " + err.message); } 
+    finally { btn.textContent = "Salva Modifiche"; btn.disabled = false; }
 }
 
-// 6. CESTINO
-async function loadHiddenProducts() {
-    if (!window.supabaseClient) { if(window.initSupabase) await window.initSupabase(); if(!window.supabaseClient) return; }
-    
-    const { data } = await window.supabaseClient.from('products').select('*').eq('visible', false);
-    const el = document.getElementById('restore-content');
-    if (!el) return;
-    
-    if (!data || data.length === 0) { el.innerHTML = '<p style="text-align:center; color:#888">Cestino vuoto.</p>'; return; }
-    
-    let html = '<ul class="restore-list">';
-    data.forEach(p => html += `<li class="restore-item"><span>${p.name}</span> <button class="btn-restore" onclick="ripristina(${p.id})">Ripristina</button></li>`);
-    el.innerHTML = html + '</ul>';
+window.toggleVisibility = async function(id, visible) {
+    try {
+        await window.supabaseClient.from('products').update({ visible: visible }).eq('id', id);
+        loadEditableProducts(); // Ricarica la lista
+    } catch(e) { alert("Errore: " + e.message); }
 }
 
-window.ripristina = async function(id) {
-    await window.supabaseClient.from('products').update({ visible: true }).eq('id', id);
-    loadEditableProducts(); 
-    loadHiddenProducts();
-    alert("Prodotto ripristinato!");
+window.deleteProductPermanently = async function(id) {
+    if(!confirm("⚠️ ATTENZIONE: Stai per eliminare DEFINITIVAMENTE questo prodotto e tutte le sue foto/varianti.\n\nNon potrai tornare indietro. Continuare?")) return;
+    
+    try {
+        // Cancella varianti e immagini prima (per sicurezza, anche se cascade dovrebbe farlo)
+        await window.supabaseClient.from('product_variants').delete().eq('product_id', id);
+        await window.supabaseClient.from('product_images').delete().eq('product_id', id);
+        await window.supabaseClient.from('products').delete().eq('id', id);
+        
+        loadEditableProducts();
+        alert("Prodotto eliminato per sempre.");
+    } catch(e) { alert("Errore eliminazione: " + e.message); }
 }

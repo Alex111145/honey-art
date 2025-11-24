@@ -11,15 +11,23 @@
         .hidden { display: none !important; }
         /* Stili specifici per la lista di modifica */
         .edit-card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #eee; }
+        .edit-card.is-hidden { border-left: 5px solid #dc3545; background: #fff5f5; } /* Stile per nascosti */
+        
         .edit-row { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; flex-wrap: wrap; }
         .edit-row label { font-size: 0.85em; font-weight: bold; color: #666; min-width: 60px; }
         .edit-row input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; }
+        
         .btn-save-item { 
             background-color: var(--colore-primario); color: white; border: none; 
             padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.9em;
             margin-top: 5px; width: 100%;
         }
         .btn-save-item:hover { background-color: #9e8221; }
+        
+        /* Bottoni azioni extra */
+        .actions-row { display: flex; gap: 5px; margin-top: 5px; }
+        .actions-row button { flex: 1; font-size: 0.8em; padding: 5px; border-radius: 4px; border: none; cursor: pointer; color: white; }
+        
         .img-preview-mini { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
     </style>
 </head>
@@ -36,81 +44,75 @@
     
     <div class="content-container">
         
-        <div class="admin-grid">
-            
-            <div class="form-section">
-                <h2>🍯 Costi Miele al Kg</h2>
-                <div class="honey-banners" id="honey-banners-container">
-                    <p style="text-align:center;">Caricamento...</p>
+        <div class="form-section full-width-section">
+            <h2>🍯 Costi Miele al Kg</h2>
+            <p style="text-align:center; font-size:0.9em; color:#666; margin-bottom:20px;">
+                Imposta il prezzo di mercato attuale. Il costo vivo di tutti i vasetti in catalogo verrà ricalcolato automaticamente in base al peso.
+            </p>
+            <div class="honey-banners" id="honey-banners-container">
+                <p style="text-align:center;">Caricamento...</p>
+            </div>
+            <button onclick="salvaCostiGlobali()" class="btn-global-save">💾 AGGIORNA PREZZI DI MERCATO</button>
+        </div>
+
+        <div class="admin-narrow-wrapper">
+            <div class="admin-grid">
+                
+                <div class="form-section">
+                    <h2>📦 Nuovo Prodotto</h2>
+                    <form id="prodottoForm" onsubmit="inviaProdotto(event)">
+                        <label for="nome-prodotto">Nome Modello:</label>
+                        <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
+                        
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <label for="peso-prodotto">Peso:</label>
+                                <select id="peso-prodotto" required>
+                                    <option value="50">50 g</option>
+                                    <option value="250">250 g</option>
+                                    <option value="500">500 g</option>
+                                    <option value="1000">1 kg</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label for="mode-inserimento">Miele:</label>
+                                <select id="mode-inserimento" required onchange="togglePrezzi()">
+                                    <option value="both">Entrambi</option>
+                                    <option value="Acacia">Solo Acacia</option>
+                                    <option value="Millefiori">Solo Millefiori</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 15px;">
+                            <div id="group-acacia" class="price-group">
+                                <label style="color: #C19F29;">Vendita ACACIA (€):</label>
+                                <input type="number" id="price-acacia" step="0.01" min="0" placeholder="Es. 12.00">
+                            </div>
+                            <div id="group-millefiori" class="price-group">
+                                <label style="color: #5B4200;">Vendita MILLEFIORI (€):</label>
+                                <input type="number" id="price-millefiori" step="0.01" min="0" placeholder="Es. 10.00">
+                            </div>
+                        </div>
+
+                        <label for="file-foto">Foto (Multi):</label>
+                        <input type="file" id="file-foto" accept="image/*" multiple required>
+                        
+                        <button type="submit" id="btn-add-prod">➕ Aggiungi</button>
+                    </form>
                 </div>
-                <p style="text-align:center; font-size:0.8em; color:#666; margin-bottom:15px;">
-                    Imposta il prezzo di mercato. Il costo vivo dei vasetti verrà ricalcolato automaticamente.
-                </p>
-                <button onclick="salvaCostiGlobali()" class="btn-global-save">💾 AGGIORNA COSTI</button>
-            </div>
 
-            <div class="form-section">
-                <h2>📦 Nuovo Prodotto</h2>
-                <form id="prodottoForm" onsubmit="inviaProdotto(event)">
-                    <label for="nome-prodotto">Nome Modello:</label>
-                    <input type="text" id="nome-prodotto" required placeholder="Es. Vasetto Cuore">
-                    
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div style="flex: 1;">
-                            <label for="peso-prodotto">Peso:</label>
-                            <select id="peso-prodotto" required>
-                                <option value="50">50 g</option>
-                                <option value="250">250 g</option>
-                                <option value="500">500 g</option>
-                                <option value="1000">1 kg</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1;">
-                            <label for="mode-inserimento">Miele:</label>
-                            <select id="mode-inserimento" required onchange="togglePrezzi()">
-                                <option value="both">Entrambi</option>
-                                <option value="Acacia">Solo Acacia</option>
-                                <option value="Millefiori">Solo Millefiori</option>
-                            </select>
-                        </div>
+                <div class="form-section">
+                    <h2>📜 Listino di sempre</h2>
+                    <p style="text-align:center; font-size:0.8em; color:#666; margin-bottom:15px;">
+                        Gestisci tutto lo storico prodotti.
+                    </p>
+                    <div id="edit-products-list" style="overflow-y: auto; max-height: 600px; padding-right:5px;">
+                        <p style="text-align:center;">Caricamento listino...</p>
                     </div>
-
-                    <div style="background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 15px;">
-                        <div id="group-acacia" class="price-group">
-                            <label style="color: #C19F29;">Vendita ACACIA (€):</label>
-                            <input type="number" id="price-acacia" step="0.01" min="0" placeholder="Es. 12.00">
-                        </div>
-                        <div id="group-millefiori" class="price-group">
-                            <label style="color: #5B4200;">Vendita MILLEFIORI (€):</label>
-                            <input type="number" id="price-millefiori" step="0.01" min="0" placeholder="Es. 10.00">
-                        </div>
-                    </div>
-
-                    <label for="file-foto">Foto (Multi):</label>
-                    <input type="file" id="file-foto" accept="image/*" multiple required>
-                    
-                    <button type="submit" id="btn-add-prod">➕ Aggiungi</button>
-                </form>
-            </div>
-
-            <div class="form-section">
-                <h2>✏️ Modifica Listino</h2>
-                <p style="text-align:center; font-size:0.8em; color:#666; margin-bottom:15px;">
-                    Modifica nomi e prezzi dei prodotti già online.
-                </p>
-                <div id="edit-products-list" style="overflow-y: auto; max-height: 500px; padding-right:5px;">
-                    <p style="text-align:center;">Caricamento listino...</p>
                 </div>
-            </div>
 
-            <div class="form-section"> 
-                <h2>♻️ Cestino</h2>
-                <details>
-                    <summary>Vedi prodotti rimossi</summary>
-                    <div id="restore-content"><p>...</p></div>
-                </details>
             </div>
-
         </div>
     </div>
 
