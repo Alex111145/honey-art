@@ -1,7 +1,7 @@
 let products = [];
 let cartQuantities = {}; 
 let carouselIndices = {};
-let autoScrollIntervals = {}; // Memorizza gli intervalli per lo scorrimento automatico
+let autoScrollIntervals = {}; 
 
 async function initializeProducts() {
     if (!window.supabaseClient) {
@@ -29,11 +29,7 @@ async function initializeProducts() {
 
         cartQuantities = {};
         carouselIndices = {};
-        
-        // Pulisce vecchi intervalli se presenti
-        for (const pid in autoScrollIntervals) {
-            clearInterval(autoScrollIntervals[pid]);
-        }
+        for (const pid in autoScrollIntervals) clearInterval(autoScrollIntervals[pid]);
         autoScrollIntervals = {};
 
         products.forEach(p => {
@@ -66,14 +62,13 @@ function renderProducts() {
         const card = document.createElement('div');
         card.className = 'product-card';
         
-        // --- GESTIONE IMMAGINI (CAROSELLO AUTOMATICO 5s) ---
+        // --- GESTIONE IMMAGINI (AUTO SCROLL 5s) ---
         let imageHTML = '';
         const images = p.product_images || [];
         images.sort((a,b) => a.id - b.id);
         const placeholder = 'https://via.placeholder.com/400?text=No+Image';
 
         if (images.length > 1) {
-            // Carosello automatico senza frecce
             imageHTML = `<div class="carousel-container" id="carousel-${p.id}">`;
             images.forEach((img, index) => {
                 const activeClass = index === 0 ? 'active' : '';
@@ -81,7 +76,6 @@ function renderProducts() {
             });
             imageHTML += `</div>`;
             
-            // Avvia il timer automatico per questo prodotto
             startAutoScroll(p.id);
 
         } else {
@@ -89,7 +83,6 @@ function renderProducts() {
             imageHTML = `<img src="${imgUrl}" class="product-main-img" onerror="this.src='${placeholder}'">`;
         }
 
-        // TENDINA VARIANTI
         let selectHTML = '';
         if (variants.length > 1) {
             selectHTML = `
@@ -132,12 +125,8 @@ function renderProducts() {
     calcTot(); 
 }
 
-// --- LOGICA SCORRIMENTO AUTOMATICO ---
 function startAutoScroll(productId) {
-    // Pulisci per sicurezza
     if (autoScrollIntervals[productId]) clearInterval(autoScrollIntervals[productId]);
-    
-    // Imposta intervallo di 5 secondi (5000 ms)
     autoScrollIntervals[productId] = setInterval(() => {
         moveCarousel(productId, 1);
     }, 5000);
@@ -146,13 +135,11 @@ function startAutoScroll(productId) {
 function moveCarousel(productId, direction) {
     const container = document.getElementById(`carousel-${productId}`);
     if (!container) return;
-    
     const slides = container.querySelectorAll('.carousel-slide');
     if (slides.length < 2) return;
 
     let currentIndex = carouselIndices[productId] || 0;
     let newIndex = currentIndex + direction;
-    
     if (newIndex >= slides.length) newIndex = 0;
     if (newIndex < 0) newIndex = slides.length - 1;
     
@@ -164,7 +151,6 @@ function moveCarousel(productId, direction) {
     });
 }
 
-// ... ALTRE FUNZIONI UI ...
 window.changeVar = function(pid) {
     const sel = document.getElementById(`var-select-${pid}`);
     const price = parseFloat(sel.options[sel.selectedIndex].dataset.price);
