@@ -29,7 +29,11 @@ async function initializeProducts() {
 
         cartQuantities = {};
         carouselIndices = {};
-        for (const pid in autoScrollIntervals) clearInterval(autoScrollIntervals[pid]);
+        
+        // Pulisce vecchi intervalli se presenti
+        for (const pid in autoScrollIntervals) {
+            clearInterval(autoScrollIntervals[pid]);
+        }
         autoScrollIntervals = {};
 
         products.forEach(p => {
@@ -69,6 +73,7 @@ function renderProducts() {
         const placeholder = 'https://via.placeholder.com/400?text=No+Image';
 
         if (images.length > 1) {
+            // Carosello automatico senza frecce
             imageHTML = `<div class="carousel-container" id="carousel-${p.id}">`;
             images.forEach((img, index) => {
                 const activeClass = index === 0 ? 'active' : '';
@@ -76,6 +81,7 @@ function renderProducts() {
             });
             imageHTML += `</div>`;
             
+            // Avvia il timer automatico per questo prodotto
             startAutoScroll(p.id);
 
         } else {
@@ -83,11 +89,12 @@ function renderProducts() {
             imageHTML = `<img src="${imgUrl}" class="product-main-img" onerror="this.src='${placeholder}'">`;
         }
 
+        // TENDINA VARIANTI (MODIFICATA: Prezzo rimosso dal testo opzione)
         let selectHTML = '';
         if (variants.length > 1) {
             selectHTML = `
                 <select id="var-select-${p.id}" onchange="changeVar(${p.id})" class="variant-select">
-                    ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">Gusto: ${v.name} - €${v.price.toFixed(2)}</option>`).join('')}
+                    ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">Gusto: ${v.name}</option>`).join('')}
                 </select>
             `;
         } else {
@@ -125,8 +132,12 @@ function renderProducts() {
     calcTot(); 
 }
 
+// --- LOGICA SCORRIMENTO AUTOMATICO ---
 function startAutoScroll(productId) {
+    // Pulisci per sicurezza
     if (autoScrollIntervals[productId]) clearInterval(autoScrollIntervals[productId]);
+    
+    // Imposta intervallo di 5 secondi (5000 ms)
     autoScrollIntervals[productId] = setInterval(() => {
         moveCarousel(productId, 1);
     }, 5000);
@@ -135,11 +146,13 @@ function startAutoScroll(productId) {
 function moveCarousel(productId, direction) {
     const container = document.getElementById(`carousel-${productId}`);
     if (!container) return;
+    
     const slides = container.querySelectorAll('.carousel-slide');
     if (slides.length < 2) return;
 
     let currentIndex = carouselIndices[productId] || 0;
     let newIndex = currentIndex + direction;
+    
     if (newIndex >= slides.length) newIndex = 0;
     if (newIndex < 0) newIndex = slides.length - 1;
     
@@ -151,6 +164,7 @@ function moveCarousel(productId, direction) {
     });
 }
 
+// ... ALTRE FUNZIONI UI ...
 window.changeVar = function(pid) {
     const sel = document.getElementById(`var-select-${pid}`);
     const price = parseFloat(sel.options[sel.selectedIndex].dataset.price);
