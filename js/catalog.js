@@ -1,206 +1,127 @@
 let products = [];
-let quantities = {};
+let cartQuantities = {}; 
 
-// 1. SCARICA PRODOTTI (SOLO QUELLI VISIBILI)
 async function initializeProducts() {
-    if (!window.supabaseClient) {
-        setTimeout(initializeProducts, 500);
-        return;
-    }
-    
+    if (!window.supabaseClient) { setTimeout(initializeProducts, 500); return; }
     try {
-        // Filtra per visible = true
         const { data, error } = await window.supabaseClient
             .from('products')
-            .select('*')
+            .select('*, product_variants(*)')
             .eq('visible', true) 
             .order('name'); 
-        
         if (error) throw error;
-        
         products = data;
-        products.forEach(p => quantities[p.id] = 0);
+        cartQuantities = {};
+        products.forEach(p => {
+            if (p.product_variants) p.product_variants.forEach(v => cartQuantities[v.id] = 0);
+        });
         renderProducts();
-        
-    } catch (err) {
-        console.error("Errore DB:", err);
-        const list = document.getElementById('product-list');
-        if(list) list.innerHTML = '<p style="color:red; text-align:center;">Errore connessione database.</p>';
-    }
+    } catch (err) { console.error(err); }
 }
 
-// 2. MOSTRA PRODOTTI
 function renderProducts() {
-    const productGrid = document.getElementById('product-list');
-    const catalogoTitle = document.getElementById('catalogo-title');
-    if (!productGrid) return;
-    
-    if (products.length === 0) {
-        productGrid.innerHTML = '<p style="text-align:center;">Nessun prodotto visibile nel catalogo.</p>';
-        return;
-    }
-
-    productGrid.innerHTML = ''; 
-    if(catalogoTitle) catalogoTitle.textContent = `Bomboniere (${products.length} articoli)`;
+    const grid = document.getElementById('product-list');
+    const title = document.getElementById('catalogo-title');
+    if (!grid) return;
+    grid.innerHTML = ''; 
+    if(title) title.textContent = `Bomboniere (${products.length} articoli)`;
 
     products.forEach(p => {
+        const variants = p.product_variants ? p.product_variants.sort((a,b) => a.price - b.price) : [];
+        if (variants.length === 0) return; 
+
         const card = document.createElement('div');
         card.className = 'product-card';
-        card.setAttribute('data-id', p.id);
         
+        let selectHTML = '';
+        if (variants.length > 1) {
+            selectHTML = `<select id="var-select-${p.id}" onchange="changeVar(${p.id})" class="variant-select">
+                ${variants.map(v => `<option value="${v.id}" data-price="${v.price}">Gusto: ${v.name} - €${v.price.toFixed(2)}</option>`).join('')}
+            </select>`;
+        } else {
+            selectHTML = `<input type="hidden" id="var-select-${p.id}" value="${variants[0].id}"><div class="single-variant-label">${variants[0].name}</div>`;
+        }
+
+        const price = variants[0].price.toFixed(2).replace('.', ',');
+
         card.innerHTML = `
-            <img src="${p.image_url}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/400?text=No+Image'">
+            <img src="${p.image_url}" onerror="this.src='https://via.placeholder.com/400'">
             <div class="product-info">
                 <h3>${p.name}</h3>
-                <p>${p.description || ''}</p>
-                <div class="price">€${p.price.toFixed(2).replace('.', ',')}</div>
-                
+                ${selectHTML}
+                <div class="price" id="price-${p.id}">€${price}</div>
                 <div class="quantity-control">
-                    <button onclick="updateQuantity(${p.id}, -1)">-</button>
+                    <button onclick="updQty(${p.id}, -1)">-</button>
                     <span id="qty-${p.id}" class="quantity-display">0</span>
-                    <button onclick="updateQuantity(${p.id}, 1)">+</button>
+                    <button onclick="updQty(${p.id}, 1)">+</button>
                 </div>
-
                 <div class="payment-selector">
-                    <label>Metodo Pagamento:</label>
-                    <select id="pay-method-${p.id}">
-                        <option value="contanti">💶 Contanti</option>
-                        <option value="pos">💳 POS / Carta</option>
-                    </select>
+                    <label>Pagamento:</label>
+                    <select id="pay-${p.id}"><option value="contanti">Contanti</option><option value="pos">POS</option></select>
                 </div>
-
-                <button class="btn-delete" onclick="nascondiProdotto(${p.id}, '${p.name.replace(/'/g, "\\'")}')">🗑️ Rimuovi dal Catalogo</button>
+                <button class="btn-delete" onclick="nascondi(${p.id})">Rimuovi</button>
             </div>
         `;
-        productGrid.appendChild(card);
+        grid.appendChild(card);
     });
-    calculateTotal(); 
+    calcTot(); 
 }
 
-// NUOVA FUNZIONE: Nasconde il prodotto (Soft Delete)
-window.nascondiProdotto = async function(id, name) {
-    if (!confirm(`Sei sicuro di voler rimuovere "${name}" dal catalogo? \n(Non verrà eliminato dalle statistiche)`)) {
-        return;
-    }
-
-    try {
-        const { error } = await window.supabaseClient
-            .from('products')
-            .update({ visible: false })
-            .eq('id', id);
-
-        if (error) throw error;
-
-        alert("Prodotto rimosso dal catalogo!");
-        initializeProducts(); // Ricarica la lista
-
-    } catch (err) {
-        alert("Errore durante la rimozione: " + err.message);
-    }
+window.changeVar = function(pid) {
+    const sel = document.getElementById(`var-select-${pid}`);
+    const price = parseFloat(sel.options[sel.selectedIndex].dataset.price);
+    document.getElementById(`price-${pid}`).textContent = `€${price.toFixed(2).replace('.', ',')}`;
+    const vid = parseInt(sel.value);
+    document.getElementById(`qty-${pid}`).textContent = cartQuantities[vid] || 0;
 }
 
-window.calculateTotal = function() {
-    let total = 0;
-    products.forEach(p => { total += (quantities[p.id] || 0) * p.price; });
-    
-    // FIX ERRORE: Controlla se l'elemento esiste prima di aggiornarlo
-    const totalEl = document.getElementById('total-price');
-    if (totalEl) {
-        totalEl.textContent = total.toFixed(2).replace('.', ',');
-    }
-    return total;
+window.updQty = function(pid, d) {
+    const sel = document.getElementById(`var-select-${pid}`);
+    const vid = parseInt(sel.value);
+    let q = (cartQuantities[vid] || 0) + d;
+    if(q<0) q=0;
+    cartQuantities[vid] = q;
+    document.getElementById(`qty-${pid}`).textContent = q;
+    calcTot();
 }
 
-window.updateQuantity = function(id, delta) {
-    let currentQty = quantities[id] || 0;
-    let newQty = currentQty + delta;
-    if (newQty < 0) newQty = 0; 
-    quantities[id] = newQty;
-    
-    const qtyDisplay = document.getElementById(`qty-${id}`);
-    if (qtyDisplay) qtyDisplay.textContent = newQty;
-    
-    calculateTotal();
+window.calcTot = function() {
+    let t = 0;
+    products.forEach(p => {
+        if(p.product_variants) p.product_variants.forEach(v => t += (cartQuantities[v.id]||0) * v.price);
+    });
+    const el = document.getElementById('total-price');
+    if(el) el.textContent = t.toFixed(2).replace('.', ',');
+}
+
+window.nascondi = async function(id) {
+    if(!confirm("Rimuovere?")) return;
+    await window.supabaseClient.from('products').update({visible:false}).eq('id', id);
+    initializeProducts();
 }
 
 window.inviaOrdine = async function() {
-    const items = products.filter(p => quantities[p.id] > 0);
-    
-    if (items.length === 0) {
-        alert("Nessun prodotto selezionato.");
-        return;
-    }
-    
-    let itemsCash = [];
-    let itemsPOS = [];
-    let totalCash = 0;
-    let totalPOS = 0;
-
-    items.forEach(item => {
-        const method = document.getElementById(`pay-method-${item.id}`).value;
-        const itemTotal = item.price * quantities[item.id];
-        
-        const orderItem = {
-            name: item.name,
-            quantity: quantities[item.id],
-            price: item.price
-        };
-
-        if (method === 'contanti') {
-            itemsCash.push(orderItem);
-            totalCash += itemTotal;
-        } else {
-            itemsPOS.push(orderItem);
-            totalPOS += itemTotal;
-        }
+    let itemsCash=[], itemsPos=[], totCash=0, totPos=0;
+    products.forEach(p => {
+        if(!p.product_variants) return;
+        const method = document.getElementById(`pay-${p.id}`).value;
+        p.product_variants.forEach(v => {
+            const q = cartQuantities[v.id] || 0;
+            if(q>0) {
+                const item = { product_id: p.id, variant_id: v.id, name: `${p.name} (${v.name})`, quantity: q, price: v.price, cost: v.cost };
+                if(method==='contanti') { itemsCash.push(item); totCash+=v.price*q; }
+                else { itemsPos.push(item); totPos+=v.price*q; }
+            }
+        });
     });
 
-    const btn = document.querySelector('.invia-btn');
-    const originalText = btn ? btn.innerHTML : "INVIA";
-    if(btn) {
-        btn.textContent = "Invio...";
-        btn.disabled = true;
-    }
-
-    try {
-        if (itemsCash.length > 0) {
-            const { error } = await window.supabaseClient.from('sales').insert({
-                total_amount: totalCash,
-                payment_method: 'contanti',
-                items: itemsCash
-            });
-            if (error) throw error;
-        }
-
-        if (itemsPOS.length > 0) {
-            const { error } = await window.supabaseClient.from('sales').insert({
-                total_amount: totalPOS,
-                payment_method: 'pos',
-                items: itemsPOS
-            });
-            if (error) throw error;
-        }
-
-        alert("✅ Ordine salvato!");
-        
-        products.forEach(p => {
-            quantities[p.id] = 0;
-            const el = document.getElementById(`qty-${p.id}`);
-            if(el) el.textContent = 0;
-        });
-        calculateTotal();
-
-    } catch (err) {
-        console.error("Errore salvataggio:", err);
-        alert("Errore: " + err.message);
-    } finally {
-        if(btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
+    if(itemsCash.length===0 && itemsPos.length===0) { alert("Carrello vuoto"); return; }
+    
+    if(itemsCash.length>0) await window.supabaseClient.from('sales').insert({total_amount: totCash, payment_method: 'contanti', items: itemsCash});
+    if(itemsPos.length>0) await window.supabaseClient.from('sales').insert({total_amount: totPos, payment_method: 'pos', items: itemsPos});
+    
+    alert("Ordine Inviato!");
+    initializeProducts();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    initializeProducts();
-});
+document.addEventListener('DOMContentLoaded', initializeProducts);

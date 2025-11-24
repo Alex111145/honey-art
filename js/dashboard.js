@@ -1,12 +1,11 @@
 document.addEventListener('DOMContentLoaded', async function() {
     
-    // Verifica connessione DB
     if (!window.supabaseClient) {
         setTimeout(() => location.reload(), 1000);
         return;
     }
 
-    // --- 1. SCARICA DATI (VENDITE E SPESE) ---
+    // --- 1. SCARICA DATI ---
     let sales = [];
     let expenses = [];
     
@@ -30,47 +29,67 @@ document.addEventListener('DOMContentLoaded', async function() {
         return; 
     }
 
-    const hasData = sales.length > 0 || expenses.length > 0;
+    // --- 2. CALCOLO TOTALI ---
+    let totalRevenue = 0;      // Incasso Totale (Prezzo Vendita)
+    let totalExpenses = 0;     // Spese Extra
+    let totalHoneyCost = 0;    // Costo Miele (Debito)
 
-    // --- 2. CALCOLO TOTALI PER I BANNER ---
-    let totalRevenue = 0;
-    let totalExpenses = 0;
+    sales.forEach(s => {
+        totalRevenue += s.total_amount;
+        
+        // Calcola il costo interno del miele per ogni articolo venduto
+        if (s.items && Array.isArray(s.items)) {
+            s.items.forEach(item => {
+                const cost = item.cost || 0; 
+                const qty = item.quantity || 1;
+                totalHoneyCost += (cost * qty);
+            });
+        }
+    });
 
-    sales.forEach(s => totalRevenue += s.total_amount);
     expenses.forEach(e => totalExpenses += Math.abs(e.amount));
     
-    const saldo = totalRevenue - totalExpenses;
+    // FORMULA: Saldo Utile = Prezzo Vendita - Prezzo Miele - Spese Extra
+    const saldoUtile = totalRevenue - totalHoneyCost - totalExpenses;
 
     if (document.getElementById('saldo-totale')) {
-        document.getElementById('saldo-totale').textContent = `€${saldo.toFixed(2).replace('.', ',')}`;
+        document.getElementById('saldo-totale').textContent = `€${saldoUtile.toFixed(2).replace('.', ',')}`;
         document.getElementById('guadagno-totale').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
+        document.getElementById('debito-totale').textContent = `-€${totalHoneyCost.toFixed(2).replace('.', ',')}`;
         document.getElementById('spesa-totale').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
-        // Semplificazione: Mese = Totale per questa demo
-        document.getElementById('guadagno-mese').textContent = `€${totalRevenue.toFixed(2).replace('.', ',')}`;
-        document.getElementById('spesa-mese').textContent = `-€${totalExpenses.toFixed(2).replace('.', ',')}`;
     }
 
-    // --- 3. ELABORAZIONE DATI PER I GRAFICI ---
+    // --- 3. GRAFICI ---
 
-    // A. GRAFICO SALDO (Timeline Unificata)
-    // Uniamo entrate e uscite in un'unica lista ordinata
-    const transactions = [
-        ...sales.map(s => ({
+    // A. Timeline Saldo (Utile Progressivo)
+    const transactions = [];
+
+    // Aggiungi Vendite (Utile = Prezzo - Costo)
+    sales.forEach(s => {
+        let saleCost = 0;
+        if (s.items) {
+            s.items.forEach(i => saleCost += (i.cost || 0) * (i.quantity || 1));
+        }
+        const saleProfit = s.total_amount - saleCost; // Utile della singola vendita
+        
+        transactions.push({
             date: new Date(s.created_at),
-            amount: parseFloat(s.total_amount), // + Entrata
+            amount: saleProfit,
             type: 'sale'
-        })),
-        ...expenses.map(e => ({
-            date: new Date(e.created_at),
-            amount: parseFloat(e.amount), // - Uscita (già negativo nel DB)
-            type: 'expense'
-        }))
-    ];
+        });
+    });
 
-    // Ordina cronologicamente
+    // Aggiungi Spese (Negative)
+    expenses.forEach(e => {
+        transactions.push({
+            date: new Date(e.created_at),
+            amount: parseFloat(e.amount), 
+            type: 'expense'
+        });
+    });
+
     transactions.sort((a, b) => a.date - b.date);
 
-    // Calcola il saldo progressivo
     let runningBalance = 0;
     const saldoLabels = [];
     const saldoData = [];
@@ -81,40 +100,27 @@ document.addEventListener('DOMContentLoaded', async function() {
         saldoData.push(runningBalance);
     });
 
-    // B. RAGGRUPPAMENTO PER GIORNO (Per Contanti, POS, Differenza)
+    // B. Stats Giornaliere (Incassi Puri)
     const dailyStats = {};
-    
     sales.forEach(s => {
-        // Usa la data locale italiana come chiave univoca
         const dateKey = new Date(s.created_at).toLocaleDateString('it-IT');
-        
-        if (!dailyStats[dateKey]) {
-            dailyStats[dateKey] = { pos: 0, cash: 0 };
-        }
-        
-        if (s.payment_method === 'pos') {
-            dailyStats[dateKey].pos += s.total_amount;
-        } else {
-            dailyStats[dateKey].cash += s.total_amount;
-        }
+        if (!dailyStats[dateKey]) dailyStats[dateKey] = { pos: 0, cash: 0 };
+        if (s.payment_method === 'pos') dailyStats[dateKey].pos += s.total_amount;
+        else dailyStats[dateKey].cash += s.total_amount;
     });
 
-    // Ordina le date correttamente
     const sortedDays = Object.keys(dailyStats).sort((a, b) => {
         const [da, ma, ya] = a.split('/');
         const [db, mb, yb] = b.split('/');
         return new Date(ya, ma - 1, da) - new Date(yb, mb - 1, db);
     });
 
-    // Estrai i dati ordinati
     const diffData = sortedDays.map(d => dailyStats[d].pos - dailyStats[d].cash);
     const cashData = sortedDays.map(d => dailyStats[d].cash);
     const posData = sortedDays.map(d => dailyStats[d].pos);
 
+    // --- 4. RENDER GRAFICI ---
 
-    // --- 4. RENDERING GRAFICI ---
-
-    // 1. Andamento Saldo
     const ctxSaldo = document.getElementById('liquidazioneChart');
     if (ctxSaldo) {
         new Chart(ctxSaldo, {
@@ -122,57 +128,35 @@ document.addEventListener('DOMContentLoaded', async function() {
             data: {
                 labels: saldoLabels,
                 datasets: [{
-                    label: 'Saldo Cumulativo (€)',
+                    label: 'Utile Cumulativo (€)',
                     data: saldoData,
                     borderColor: '#C19F29',
                     borderWidth: 2,
-                    fill: {
-                        target: 'origin',
-                        above: 'rgba(193, 159, 41, 0.2)',
-                        below: 'rgba(220, 53, 69, 0.2)'
-                    },
-                    tension: 0.3,
-                    pointRadius: 2
+                    fill: true,
+                    backgroundColor: 'rgba(193, 159, 41, 0.1)',
+                    tension: 0.3
                 }]
             },
-            options: { 
-                responsive: true,
-                aspectRatio: window.innerWidth < 768 ? 2 : 4,
-                scales: {
-                    y: { grid: { color: c => c.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)' } }
-                }
-            }
+            options: { responsive: true, aspectRatio: 2 }
         });
     }
 
-    // 2. Differenza POS vs Contanti
     const ctxDiff = document.getElementById('diffChart');
     if (ctxDiff) {
-        const bgColors = diffData.map(val => val >= 0 ? 'rgba(13, 110, 253, 0.7)' : 'rgba(25, 135, 84, 0.7)');
-        const borderColors = diffData.map(val => val >= 0 ? '#0d6efd' : '#198754');
-
         new Chart(ctxDiff, {
             type: 'bar',
             data: {
                 labels: sortedDays,
                 datasets: [{
-                    label: 'Differenza (€)',
+                    label: 'Diff (POS - Cash)',
                     data: diffData,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: 1
+                    backgroundColor: diffData.map(v => v >= 0 ? 'rgba(13, 110, 253, 0.7)' : 'rgba(25, 135, 84, 0.7)')
                 }]
             },
-            options: {
-                responsive: true,
-                aspectRatio: window.innerWidth < 768 ? 2 : 4,
-                plugins: { legend: { display: false } },
-                scales: { y: { grid: { color: c => c.tick.value === 0 ? '#333' : 'rgba(0,0,0,0.1)', lineWidth: c => c.tick.value === 0 ? 2 : 1 } } }
-            }
+            options: { responsive: true, aspectRatio: 2 }
         });
     }
 
-    // 3. Contanti (Linea)
     const ctxCash = document.getElementById('cashChart');
     if (ctxCash) {
         new Chart(ctxCash, {
@@ -180,20 +164,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             data: {
                 labels: sortedDays,
                 datasets: [{
-                    label: 'Totale Contanti (€)',
+                    label: 'Contanti',
                     data: cashData,
-                    backgroundColor: 'rgba(25, 135, 84, 0.2)',
                     borderColor: '#198754',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3
+                    backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                    fill: true
                 }]
             },
             options: { responsive: true }
         });
     }
 
-    // 4. POS (Linea)
     const ctxPOS = document.getElementById('posChart');
     if (ctxPOS) {
         new Chart(ctxPOS, {
@@ -201,59 +182,42 @@ document.addEventListener('DOMContentLoaded', async function() {
             data: {
                 labels: sortedDays,
                 datasets: [{
-                    label: 'Totale POS (€)',
+                    label: 'POS',
                     data: posData,
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.2)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.3
+                    fill: true
                 }]
             },
             options: { responsive: true }
         });
     }
 
-    // 5. Prodotti Più Venduti (Ordinati!)
     const ctxTop = document.getElementById('topProductsChart');
     if (ctxTop) {
         let productCounts = {};
-        
-        if (hasData) {
-            sales.forEach(order => {
-                if (order.items && Array.isArray(order.items)) {
-                    order.items.forEach(item => {
-                        productCounts[item.name] = (productCounts[item.name] || 0) + item.quantity;
-                    });
-                }
-            });
-        }
+        sales.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    const name = item.name;
+                    productCounts[name] = (productCounts[name] || 0) + item.quantity;
+                });
+            }
+        });
 
-        // Ordina per quantità decrescente
-        const sortedProducts = Object.entries(productCounts)
-            .sort(([,a], [,b]) => b - a) // Sort by value desc
-            .slice(0, 10); // Prendi i top 10
+        const sortedProducts = Object.entries(productCounts).sort(([,a], [,b]) => b - a).slice(0, 10);
         
-        const pLabels = sortedProducts.map(([k]) => k);
-        const pData = sortedProducts.map(([,v]) => v);
-
         new Chart(ctxTop, {
             type: 'bar',
             data: {
-                labels: pLabels,
+                labels: sortedProducts.map(([k]) => k),
                 datasets: [{
-                    label: 'Quantità Venduta',
-                    data: pData,
-                    backgroundColor: 'rgba(193, 159, 41, 0.7)',
-                    borderColor: '#5B4200',
-                    borderWidth: 1
+                    label: 'Qta',
+                    data: sortedProducts.map(([,v]) => v),
+                    backgroundColor: '#C19F29'
                 }]
             },
-            options: {
-                responsive: true,
-                indexAxis: 'y',
-                plugins: { legend: { display: false } }
-            }
+            options: { indexAxis: 'y' }
         });
     }
 });

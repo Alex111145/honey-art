@@ -23,23 +23,22 @@
         
         <div class="stats-grid">
             <div class="stat-card border-gold">
-                <h3>💰 Saldo Attuale</h3>
+                <h3>💰 Saldo Totale (Utile Netto)</h3>
                 <div class="stat-value" id="saldo-totale">Caricamento...</div>
             </div>
+            
             <div class="stat-card border-green">
-                <h3>📅 Ricavi Mese</h3>
-                <div class="stat-value" id="guadagno-mese">...</div>
-            </div>
-            <div class="stat-card border-green">
-                <h3>📈 Ricavi Totali</h3>
+                <h3>📈 Incasso Totale (Vendite)</h3>
                 <div class="stat-value" id="guadagno-totale">...</div>
             </div>
+
             <div class="stat-card border-red">
-                <h3>📅 Spese Mese</h3>
-                <div class="stat-value" id="spesa-mese">...</div>
+                <h3>📉 Totale Costo Miele (Debito)</h3>
+                <div class="stat-value" id="debito-totale">...</div>
             </div>
+            
             <div class="stat-card border-red">
-                <h3>📉 Spese Totali</h3>
+                <h3>📉 Spese Extra Totali</h3>
                 <div class="stat-value" id="spesa-totale">...</div>
             </div>
         </div>
@@ -52,9 +51,6 @@
             
             <div class="chart-card chart-full">
                 <h2>⚖️ Differenza Pagamenti (POS vs Contanti)</h2>
-                <p style="font-size:0.9em; color:#666; margin-top:-10px; margin-bottom:10px;">
-                    Barra in alto (Blu) = Più POS | Barra in basso (Verde) = Più Contanti
-                </p>
                 <canvas id="diffChart"></canvas>
             </div>
             
