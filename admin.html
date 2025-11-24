@@ -6,11 +6,6 @@
     <title>HoneyArt - Admin</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        /* Stile per nascondere/mostrare i prezzi con transizione */
-        .price-group { transition: all 0.3s ease; overflow: hidden; }
-        .hidden { display: none; }
-    </style>
 </head>
 <body>
 
@@ -82,8 +77,9 @@
                         </p>
                     </div>
 
-                    <label for="file-foto">Foto:</label>
-                    <input type="file" id="file-foto" accept="image/*" required>
+                    <label for="file-foto">Foto (puoi selezionarne più di una):</label>
+                    <input type="file" id="file-foto" accept="image/*" multiple required>
+                    <p style="font-size:0.8em; color:#666; margin-top:-10px;">Tieni premuto CTRL (o CMD) per selezionare più file.</p>
                     
                     <button type="submit" id="btn-add-prod">➕ Aggiungi al Catalogo</button>
                 </form>
@@ -101,7 +97,6 @@
     </div>
 
     <script>
-        // Funzione visuale per nascondere i campi prezzo non necessari
         function togglePrezzi() {
             const mode = document.getElementById('mode-inserimento').value;
             const groupAcacia = document.getElementById('group-acacia');
@@ -118,7 +113,6 @@
                 groupMille.classList.remove('hidden');
             }
         }
-        // Esegui all'avvio
         togglePrezzi();
     </script>
 

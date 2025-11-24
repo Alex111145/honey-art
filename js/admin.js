@@ -1,4 +1,4 @@
-// CONFIGURAZIONE: SOLO 2 MIELI
+// CONFIGURAZIONE
 const HONEY_TYPES = ['Acacia', 'Millefiori'];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadHiddenProducts();
 });
 
-// --- UTILITY ---
+// UTILITY
 function extractGrams(text) {
     const match = text.match(/(\d+)\s*(g|kg)/i);
     if (!match) return 0;
@@ -80,22 +80,21 @@ window.salvaCostiGlobali = async function() {
     } catch (err) { alert("Errore: " + err.message); btn.disabled = false; btn.textContent = "💾 AGGIORNA COSTI AL KG"; }
 }
 
-// 3. NUOVO PRODOTTO (MULTI-GUSTO E PREZZI DIVERSI)
+// 3. NUOVO PRODOTTO (MULTI-GUSTO, MULTI-FOTO)
 async function inviaProdotto(event) {
     event.preventDefault();
     if (!window.supabaseClient) return;
 
     const nomeBase = document.getElementById('nome-prodotto').value.trim();
     const grams = parseInt(document.getElementById('peso-prodotto').value);
-    const mode = document.getElementById('mode-inserimento').value; // 'both', 'Acacia', 'Millefiori'
-    const file = document.getElementById('file-foto').files[0];
+    const mode = document.getElementById('mode-inserimento').value;
+    const fileInput = document.getElementById('file-foto');
     const btn = document.getElementById('btn-add-prod');
 
-    // Recupero Prezzi specifici
     const priceAcacia = parseFloat(document.getElementById('price-acacia').value);
     const priceMille = parseFloat(document.getElementById('price-millefiori').value);
 
-    // Validazione Prezzi
+    // Validazione
     if ((mode === 'both' || mode === 'Acacia') && (!priceAcacia || priceAcacia <= 0)) {
         alert("Inserisci un prezzo valido per Acacia!"); return;
     }
@@ -103,74 +102,73 @@ async function inviaProdotto(event) {
         alert("Inserisci un prezzo valido per Millefiori!"); return;
     }
 
-    // Nome Generico (Es. "Vasetto Cuore 50g")
-    let suffix = grams === 1000 ? '1kg' : `${grams}g`;
-    const fullName = `${nomeBase} ${suffix}`;
+    if (fileInput.files.length === 0) { alert("Seleziona almeno una foto!"); return; }
 
-    if (!file) { alert("Carica una foto!"); return; }
+    const fullName = `${nomeBase} ${grams === 1000 ? '1kg' : `${grams}g`}`;
 
     try {
-        btn.textContent = "Elaborazione..."; btn.disabled = true;
+        btn.textContent = "Caricamento Foto..."; btn.disabled = true;
 
-        // A. Upload Foto
-        const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
-        const { error: upErr } = await window.supabaseClient.storage.from('product-images').upload(fileName, file);
-        if (upErr) throw upErr;
-        const { data: urlData } = window.supabaseClient.storage.from('product-images').getPublicUrl(fileName);
+        // A. LOOP UPLOAD IMMAGINI
+        const uploadedImageUrls = [];
+        for (let i = 0; i < fileInput.files.length; i++) {
+            const file = fileInput.files[i];
+            const fileName = `${Date.now()}_${i}_${file.name.replace(/\s+/g, '-')}`;
+            
+            const { error: upErr } = await window.supabaseClient.storage.from('product-images').upload(fileName, file);
+            if (upErr) throw upErr;
+            
+            const { data: urlData } = window.supabaseClient.storage.from('product-images').getPublicUrl(fileName);
+            uploadedImageUrls.push(urlData.publicUrl);
+        }
 
-        // B. Gestione Prodotto Padre (Crea o Recupera)
+        // B. CREA/RECUPERA PRODOTTO
         let productId = null;
         const { data: existingProducts } = await window.supabaseClient.from('products').select('id').eq('name', fullName).limit(1);
 
         if (existingProducts && existingProducts.length > 0) {
             productId = existingProducts[0].id;
-            // Aggiorna foto se prodotto esiste
-            await window.supabaseClient.from('products').update({ image_url: urlData.publicUrl, visible: true }).eq('id', productId);
+            await window.supabaseClient.from('products').update({ visible: true }).eq('id', productId);
         } else {
             const { data: prodData, error: inErr } = await window.supabaseClient
                 .from('products')
-                .insert({ name: fullName, description: '', price: 0, image_url: urlData.publicUrl, visible: true })
+                .insert({ name: fullName, description: '', price: 0, visible: true })
                 .select();
             if (inErr) throw inErr;
             productId = prodData[0].id;
         }
 
-        // C. Calcolo Costi e Preparazione Varianti
+        // C. SALVA LE FOTO
+        if (uploadedImageUrls.length > 0) {
+            const imagesToInsert = uploadedImageUrls.map(url => ({
+                product_id: productId,
+                image_url: url
+            }));
+            const { error: imgErr } = await window.supabaseClient.from('product_images').insert(imagesToInsert);
+            if (imgErr) throw imgErr;
+        }
+
+        // D. CALCOLO COSTI E VARIANTI
         const { data: honeyData } = await window.supabaseClient.from('honey_costs').select('*');
         const pricePerKgMap = {};
         if(honeyData) honeyData.forEach(h => pricePerKgMap[h.name] = h.cost);
 
         const variantsToUpsert = [];
-
-        // Prepara Acacia se richiesto
         if (mode === 'both' || mode === 'Acacia') {
             const cost = (grams / 1000) * (pricePerKgMap['Acacia'] || 0);
-            variantsToUpsert.push({
-                product_id: productId,
-                name: 'Acacia',
-                cost: cost,
-                price: priceAcacia
-            });
+            variantsToUpsert.push({ product_id: productId, name: 'Acacia', cost: cost, price: priceAcacia });
         }
-
-        // Prepara Millefiori se richiesto
         if (mode === 'both' || mode === 'Millefiori') {
             const cost = (grams / 1000) * (pricePerKgMap['Millefiori'] || 0);
-            variantsToUpsert.push({
-                product_id: productId,
-                name: 'Millefiori',
-                cost: cost,
-                price: priceMille
-            });
+            variantsToUpsert.push({ product_id: productId, name: 'Millefiori', cost: cost, price: priceMille });
         }
 
-        // D. Invio al DB (Upsert gestisce aggiornamenti o nuovi inserimenti)
         const { error: vErr } = await window.supabaseClient.from('product_variants')
             .upsert(variantsToUpsert, { onConflict: 'product_id, name' });
 
         if (vErr) throw vErr;
 
-        alert(`✅ Prodotto Salvato: ${fullName}\nVarianti aggiornate: ${variantsToUpsert.length}`);
+        alert(`✅ Prodotto Salvato!\nFoto caricate: ${uploadedImageUrls.length}`);
         window.location.href = "index.html";
 
     } catch (err) {
@@ -186,7 +184,6 @@ async function loadHiddenProducts() {
     const { data } = await window.supabaseClient.from('products').select('*').eq('visible', false);
     const el = document.getElementById('restore-content');
     if (!el) return;
-    
     if (!data || data.length === 0) { el.innerHTML = '<p style="text-align:center; color:#888">Cestino vuoto.</p>'; return; }
     
     let html = '<ul class="restore-list">';
